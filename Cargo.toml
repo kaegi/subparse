@@ -1,0 +1,15 @@
+[package]
+name = "subparse"
+version = "0.1.0"
+authors = ["kaegi <kaegi.dev@gmail.com>"]
+description = "Load, change and write common subtitle formats (srt/ass/idx)"
+repository = "https://github.com/kaegi/subparse"
+documentation = "https://docs.rs/subparse"
+readme = "README.md"
+keywords = ["subtitle", "parse", "library", "write"]
+license = "LGPL-3.0"
+
+
+[dependencies]
+error-chain = "~0.10.0"
+combine = "~2.3.1"
