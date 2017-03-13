@@ -139,10 +139,8 @@ impl SrtFile {
 
 
         let mut state: SrtParserState = SrtParserState::Emptyline; // expect emptyline or index
-        let lines_with_newl: Vec<(String, String)> = get_lines_non_destructive(s)
-            .map_err(|(line_num, err_str)| LineParserError(line_num, err_str))?;
 
-        for (line_num, (line, newl)) in lines_with_newl.into_iter().enumerate() {
+        for (line_num, (line, newl)) in get_lines_non_destructive(s).into_iter().enumerate() {
             state = match state {
                 SrtParserState::Emptyline => Self::next_state_from_emptyline(&mut result, line_num, line)?,
                 SrtParserState::Index => Self::next_state_from_index(&mut result, line_num, line)?,

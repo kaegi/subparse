@@ -164,8 +164,7 @@ impl IdxFile {
         let (bom, s) = split_bom(i);
         result.push(IdxFilePart::Filler(bom.to_string()));
 
-        let lines = get_lines_non_destructive(s).map_err(|(line_num, err_str)| IdxLineParseError(line_num, err_str))?;
-        for (line_num, (line, newl)) in lines.into_iter().enumerate() {
+        for (line_num, (line, newl)) in get_lines_non_destructive(s).into_iter().enumerate() {
             let mut file_parts = Self::parse_line(line_num, line)?;
             result.append(&mut file_parts);
             result.push(IdxFilePart::Filler(newl));

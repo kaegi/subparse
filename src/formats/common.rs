@@ -7,14 +7,12 @@
 
 use std::str::FromStr;
 use std::fmt::Display;
-use std::result::Result as StdResult;
 
 use combine::char::*;
 use combine::combinator::*;
 use combine::primitives::{ParseError, ParseResult, Parser, Stream};
 
 type CustomCharParser<I> = Expected<Satisfy<I, fn(char) -> bool>>;
-type NewlineParser<I> = Or<With<Token<I>, Value<I, &'static str>>, With<(Token<I>, Token<I>), Value<I, &'static str>>>;
 
 /// Returns the string without BOMs. Unchanged if string does not start with one.
 pub fn split_bom(s: &str) -> (&str, &str) {
@@ -54,28 +52,6 @@ pub fn ws<I>() -> CustomCharParser<I>
         c == ' ' || c == '\t'
     }
     satisfy(f as fn(_) -> _).expected("tab or space")
-}
-
-/// Parses newline and carriage return.
-#[inline]
-pub fn newl<I>() -> NewlineParser<I>
-    where I: Stream<Item = char>
-{
-    let nl: _ = token('\n').with(value("\n"));
-    let y: _ = (token('\r'), token('\n')).with(value("\r\n"));
-    or(nl, y)
-}
-
-/// Parses everything but newline and carriage returns.
-#[inline]
-#[allow(trivial_casts)]
-pub fn no_newl<I>() -> CustomCharParser<I>
-    where I: Stream<Item = char>
-{
-    fn f(c: char) -> bool {
-        c != '\r' && c != '\n'
-    }
-    satisfy(f as fn(_) -> _).expected("non-line break character (neither \\n nor \\r)")
 }
 
 /// Matches a positive or negative intger number.
@@ -137,31 +113,40 @@ pub fn dedup_string_parts<T, F>(v: Vec<T>, mut extract_fn: F) -> Vec<T>
 
 // used in `get_lines_non_destructive()`
 type SplittedLine = (String /* string */, String /* newline string like \n or \r\n */);
-type ErrorWithLineInfo = (usize /* error line number */, String /* error string */);
 
 /// Iterates over all lines in `s` and calls the `process_line` closure for every line and line ending.
 /// This ensures that we can reconstuct the file with correct line endings.
-pub fn get_lines_non_destructive(mut s: &str) -> StdResult<Vec<SplittedLine>, ErrorWithLineInfo> {
-    // go through each line
-    let mut line_num = 0;
+///
+/// This will also accept the line ending `\r` (not within `\r\n`) to avoid error handling.
+pub fn get_lines_non_destructive(s: &str) -> Vec<SplittedLine> {
     let mut result = Vec::new();
+    let mut rest = s;
     loop {
-        // we need to go this way, because we also want to restore line breaks. A "{String}.lines()" call would discard them.
-        let line_parse_result = (many(no_newl()), or(newl(), with(eof(), string("")))).parse(s);
-        match line_parse_result {
-            Ok(((line, newl), rest)) => {
-                result.push((line, newl.to_string()));
-                if rest.is_empty() {
-                    return Ok(result);
+        if rest.is_empty() { return result; }
+
+        match rest.char_indices().find(|&(_, c)| c == '\r' || c == '\n') {
+            Some((idx, _)) => {
+                let (line_str, new_rest) = rest.split_at(idx);
+                rest = new_rest;
+
+                let line = line_str.to_string();
+                if rest.starts_with("\r\n") {
+                    result.push((line, "\r\n".to_string()));
+                    rest = &rest[2..];
+                } else if rest.starts_with("\n") {
+                    result.push((line, "\n".to_string()));
+                    rest = &rest[1..];
+                } else if rest.starts_with("\r") {
+                    // we only treat this as valid line ending to avoid error handling
+                    result.push((line, "\r".to_string()));
+                    rest = &rest[1..];
                 }
-                s = rest;
             }
-            Err(err) => {
-                return Err((line_num, parse_error_to_string(err)));
+            None => {
+                result.push((rest.to_string(), "".to_string()));
+                return result;
             }
         }
-
-        line_num += 1;
     }
 }
 
@@ -169,8 +154,7 @@ pub fn get_lines_non_destructive(mut s: &str) -> StdResult<Vec<SplittedLine>, Er
 fn get_lines_non_destructive_test0() {
     let lines = ["", "aaabb", "aaabb\r\nbcccc\n\r\n ", "aaabb\r\nbcccc"];
     for &full_line in lines.into_iter() {
-        let split_line = get_lines_non_destructive(full_line).unwrap();
-        let joined: String = split_line.into_iter().flat_map(|(s1, s2)| vec![s1, s2].into_iter()).collect();
+        let joined: String = get_lines_non_destructive(full_line).into_iter().flat_map(|(s1, s2)| vec![s1, s2].into_iter()).collect();
         assert_eq!(full_line, joined);
     }
 }

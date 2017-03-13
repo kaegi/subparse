@@ -168,10 +168,8 @@ impl SsaFile {
     fn parse_dialog_lines(fields_info: &SsaFieldsInfo, s: &str) -> Result<Vec<SsaFilePart>> {
         let mut result = Vec::new();
         let mut section_opt: Option<String> = None;
-        let lines_with_newl: Vec<(String, String)> = get_lines_non_destructive(s)
-            .map_err(|(line_num, err_str)| SsaLineParseError(line_num, err_str))?;
 
-        for (line_num, (line, newl)) in lines_with_newl.into_iter().enumerate() {
+        for (line_num, (line, newl)) in get_lines_non_destructive(s).into_iter().enumerate() {
             let trimmed_line = line.trim().to_string();
 
             // parse section headers like `[Events]`
