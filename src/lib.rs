@@ -32,6 +32,7 @@
 #[macro_use]
 extern crate error_chain;
 extern crate combine;
+extern crate vobsub;
 
 mod formats;
 
@@ -44,8 +45,9 @@ pub mod errors;
 pub use formats::srt::SrtFile;
 pub use formats::idx::IdxFile;
 pub use formats::ssa::SsaFile;
+pub use formats::vobsub::VobFile;
 pub use formats::SubtitleFormat;
-pub use formats::{get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, parse_file_from_string};
+pub use formats::{get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, parse_file, parse_file_from_string};
 
 use errors::*;
 use timetypes::TimeSpan;
