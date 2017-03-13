@@ -6,10 +6,11 @@
 pub mod srt;
 pub mod ssa;
 pub mod idx;
+pub mod vobsub;
 pub mod common;
 
 use SubtitleFile;
-use ParseSubtitleString;
+use {ParseSubtitle, ParseSubtitleString};
 use errors::*;
 
 
@@ -24,7 +25,23 @@ pub enum SubtitleFormat {
 
     /// .idx file
     VobSubIdx,
+
+    /// .sub file (VobSub)
+    VobSubSub,
 }
+
+impl SubtitleFormat {
+    /// Get a descriptive string for the format like `".srt (SubRip)"`.
+    pub fn get_name(&self) -> &'static str {
+        match *self {
+            SubtitleFormat::SubRip => ".srt (SubRip)",
+            SubtitleFormat::SubStationAlpha => ".ssa (SubStation Alpha)",
+            SubtitleFormat::VobSubIdx => ".idx (VobSub)",
+            SubtitleFormat::VobSubSub => ".sub (VobSub)",
+        }
+    }
+}
+
 
 /// Returns the subtitle format by the file ending (`Option` as return type).
 ///
@@ -38,6 +55,8 @@ pub fn get_subtitle_format_by_ending(path: &str) -> Option<SubtitleFormat> {
         Some(SubtitleFormat::SubStationAlpha)
     } else if path.ends_with(".idx") {
         Some(SubtitleFormat::VobSubIdx)
+    } else if path.ends_with(".sub") {
+        Some(SubtitleFormat::VobSubSub)
     } else {
         None
     }
@@ -66,11 +85,26 @@ impl<T> ClonableSubtitleFile for T
     }
 }
 
-/// Parse text subtitle, invoking the right parser given by `format`.
+/// Parse text subtitles, invoking the right parser given by `format`.
+///
+/// Returns an `Err(ErrorKind::TextFormatOnly)` if attempted on a binary file format.
 pub fn parse_file_from_string(format: SubtitleFormat, content: String) -> Result<Box<ClonableSubtitleFile>> {
     match format {
         SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse_from_string(content)?)),
         SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse_from_string(content)?)),
         SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse_from_string(content)?)),
+        SubtitleFormat::VobSubSub => Err(ErrorKind::TextFormatOnly.into()),
+    }
+}
+
+/// Parse all subtitle formats, invoking the right parser given by `format`.
+///
+/// Decodes the bytes to a String for text formats (assuming utf-8 encoding).
+pub fn parse_file(format: SubtitleFormat, content: &[u8]) -> Result<Box<ClonableSubtitleFile>> {
+    match format {
+        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(content)?)),
+        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(content)?)),
+        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(content)?)),
+        SubtitleFormat::VobSubSub => Ok(Box::new(vobsub::VobFile::parse(content)?)),
     }
 }
