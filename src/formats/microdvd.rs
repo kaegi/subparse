@@ -127,8 +127,8 @@ impl MdvdLine {
 
 impl MdvdFile {
     /// Parse a MicroDVD `.sub` subtitle string to `MdvdFile`.
-    pub fn parse(s: &str) -> SubtitleParserResult<MdvdFile> {
-        let file_opt = Self::parse_file(s);
+    pub fn parse(s: &str, fps: f64) -> SubtitleParserResult<MdvdFile> {
+        let file_opt = Self::parse_file(s, fps);
         match file_opt {
             Ok(file) => Ok(file),
             Err(err) => Err(err.into()),
@@ -138,7 +138,7 @@ impl MdvdFile {
 
 /// Implements parse functions.
 impl MdvdFile {
-    fn parse_file(i: &str) -> Result<MdvdFile> {
+    fn parse_file(i: &str, fps: f64) -> Result<MdvdFile> {
         let mut result: Vec<MdvdLine> = Vec::new();
 
         // remove utf-8 bom
@@ -152,7 +152,7 @@ impl MdvdFile {
         }
 
         Ok(MdvdFile {
-            fps: 25.0,
+            fps: fps,
             v: result,
         })
     }
@@ -350,7 +350,7 @@ mod tests {
 
     /// Parse string with `MdvdFile`, and reencode it with `MdvdFile`.
     fn mdvd_reconstruct(s: &str) -> String {
-        let file = MdvdFile::parse(s).unwrap();
+        let file = MdvdFile::parse(s, 25.0).unwrap();
         let data = file.to_data().unwrap();
         String::from_utf8(data).unwrap()
     }
