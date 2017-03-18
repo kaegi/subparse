@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-use {ParseSubtitleString, SubtitleEntry, SubtitleFile};
+use {SubtitleEntry, SubtitleFile};
 use errors::Result as SubtitleParserResult;
 use formats::common::*;
 use timetypes::{TimePoint, TimeSpan};
@@ -118,9 +118,10 @@ pub struct SrtFile {
     v: Vec<SrtFilePart>,
 }
 
-impl ParseSubtitleString for SrtFile {
-    fn parse_from_string(s: String) -> SubtitleParserResult<SrtFile> {
-        let file_opt = Self::parse_file(s.as_str());
+impl SrtFile {
+    /// Parse a `.srt` subtitle string to `SrtFile`.
+    pub fn parse(s: &str) -> SubtitleParserResult<SrtFile> {
+        let file_opt = Self::parse_file(s);
         match file_opt {
             Ok(file) => Ok(SrtFile::new(file)),
             Err(err) => Err(err.into()),
@@ -408,10 +409,10 @@ impl SrtFile {
 mod tests {
     #[allow(unsafe_code)]
     fn parse_srt(s: String) {
-        use {ParseSubtitleString, SubtitleFile};
+        use SubtitleFile;
 
         // reconstruct file
-        let srt_file = super::SrtFile::parse_from_string(s.clone()).unwrap();
+        let srt_file = super::SrtFile::parse(&s).unwrap();
         let s2 = srt_file.to_data().unwrap();
         assert_eq!(s,
                    unsafe { ::std::str::from_utf8_unchecked(&s2) }.to_string());

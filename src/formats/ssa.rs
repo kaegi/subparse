@@ -4,7 +4,7 @@
 
 
 
-use {ParseSubtitleString, SubtitleEntry, SubtitleFile};
+use {SubtitleEntry, SubtitleFile};
 use errors::Result as SubtitleParserResult;
 use formats::common::*;
 use timetypes::{TimePoint, TimeSpan};
@@ -111,9 +111,10 @@ impl SsaFieldsInfo {
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 // SSA parser
 
-impl ParseSubtitleString for SsaFile {
-    fn parse_from_string(s: String) -> SubtitleParserResult<SsaFile> {
-        match Self::parse_inner(s) {
+impl SsaFile {
+    /// Parse a `.ssa` subtitle string to `SsaFile`.
+    pub fn parse(s: &str) -> SubtitleParserResult<SsaFile> {
+        match Self::parse_inner(s.to_string()) {
             Ok(v) => Ok(v),
             Err(e) => Err(e.into()),
         }

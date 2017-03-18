@@ -5,7 +5,7 @@
 
 
 
-use {ParseSubtitleString, SubtitleEntry, SubtitleFile};
+use {SubtitleEntry, SubtitleFile};
 use errors::Result as SubtitleParserResult; // the crate wide error type (we use a custom error type here)
 use super::common::*;
 use timetypes::{TimeDelta, TimePoint, TimeSpan};
@@ -146,8 +146,9 @@ impl SubtitleFile for IdxFile {
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 // .idx parser
 
-impl ParseSubtitleString for IdxFile {
-    fn parse_from_string(s: String) -> SubtitleParserResult<IdxFile> {
+impl IdxFile {
+    /// Parse a `.idx` subtitle string to `IdxFile`.
+    pub fn parse(s: &str) -> SubtitleParserResult<IdxFile> {
         match IdxFile::parse_inner(&s) {
             Ok(v) => Ok(v),
             Err(e) => Err(e.into()),

@@ -37,7 +37,7 @@ pub use formats::ssa::SsaFile;
 pub use formats::vobsub::VobFile;
 pub use formats::microdvd::MdvdFile;
 pub use formats::SubtitleFormat;
-pub use formats::{get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, parse_file, parse_file_from_string};
+pub use formats::{get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, parse_bytes, parse_str};
 
 use errors::*;
 use timetypes::TimeSpan;
@@ -66,33 +66,6 @@ pub trait SubtitleFile {
     /// Returns a byte-stream in the respective format (.ssa, .srt, etc.) with the
     /// (probably) altered information.
     fn to_data(&self) -> Result<Vec<u8>>;
-}
-
-/// This trait is implemented for all text subtitle file types which can be parsed from a string.
-///
-/// Note that most subtitles are in text format, but a few of them are in binary format.
-pub trait ParseSubtitleString: Sized {
-    /// Parse the subtitle from text.
-    fn parse_from_string(s: String) -> Result<Self>;
-}
-
-/// This trait is implemented for all subtitle files.
-///
-/// It is implemented for all types that implement `ParseSubtitleString`, by converting the bytes
-/// to a string (assuming utf-8 encoding).
-pub trait ParseSubtitle: Sized {
-    /// Parse the subtitle from bytes.
-    fn parse(b: &[u8]) -> Result<Self>;
-}
-
-impl<T> ParseSubtitle for T
-    where T: ParseSubtitleString
-{
-    /// Parse the subtitle from bytes.
-    fn parse(b: &[u8]) -> Result<Self> {
-        let s = String::from_utf8(b.to_vec())?;
-        Self::parse_from_string(s)
-    }
 }
 
 /// The data which can be read from/written to a subtitle file.

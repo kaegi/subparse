@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-use {ParseSubtitle, SubtitleEntry, SubtitleFile, SubtitleFormat};
+use {SubtitleEntry, SubtitleFile, SubtitleFormat};
 use errors::Result as SubtitleParserResult;
 use timetypes::{TimePoint, TimeSpan};
 use self::errors::*;
@@ -42,8 +42,9 @@ struct VobSubSubtitle {
     timespan: TimeSpan,
 }
 
-impl ParseSubtitle for VobFile {
-    fn parse(b: &[u8]) -> SubtitleParserResult<Self> {
+impl VobFile {
+    /// Parse contents of a VobSub `.sub` file to `VobFile`.
+    pub fn parse(b: &[u8]) -> SubtitleParserResult<Self> {
         let lines = vobsub::subtitles(b)
             .map(|sub_res| -> vobsub::Result<VobSubSubtitle> {
                 let sub = sub_res?;

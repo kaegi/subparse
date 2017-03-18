@@ -2,7 +2,7 @@ extern crate subparse;
 
 use subparse::timetypes::TimeDelta;
 use subparse::SubtitleEntry;
-use subparse::{get_subtitle_format_by_ending_err, parse_file_from_string};
+use subparse::{get_subtitle_format_by_ending_err, parse_str};
 
 /// This function reads the content of a file to a `String`.
 fn read_file(path: &str) -> String {
@@ -20,7 +20,7 @@ fn main() {
 
     // parse the file
     let format = get_subtitle_format_by_ending_err(path).expect("unknown format");
-    let mut subtitle_file = parse_file_from_string(format, file_content).expect("parser error");
+    let mut subtitle_file = parse_str(format, &file_content).expect("parser error");
     let mut subtitle_entries: Vec<SubtitleEntry> = subtitle_file.get_subtitle_entries().expect("unexpected error");
 
     // shift all subtitle entries by 1 minute and append "subparse" to each subtitle line

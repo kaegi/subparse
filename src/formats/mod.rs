@@ -11,7 +11,6 @@ pub mod vobsub;
 pub mod common;
 
 use SubtitleFile;
-use {ParseSubtitle, ParseSubtitleString};
 use errors::*;
 
 
@@ -93,25 +92,25 @@ impl<T> ClonableSubtitleFile for T
 /// Parse text subtitles, invoking the right parser given by `format`.
 ///
 /// Returns an `Err(ErrorKind::TextFormatOnly)` if attempted on a binary file format.
-pub fn parse_file_from_string(format: SubtitleFormat, content: String) -> Result<Box<ClonableSubtitleFile>> {
+pub fn parse_str(format: SubtitleFormat, content: &str) -> Result<Box<ClonableSubtitleFile>> {
     match format {
-        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse_from_string(content)?)),
-        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse_from_string(content)?)),
-        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse_from_string(content)?)),
+        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(content)?)),
+        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(content)?)),
+        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(content)?)),
         SubtitleFormat::VobSubSub => Err(ErrorKind::TextFormatOnly.into()),
-        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse_from_string(content)?)),
+        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(content)?)),
     }
 }
 
 /// Parse all subtitle formats, invoking the right parser given by `format`.
 ///
 /// Decodes the bytes to a String for text formats (assuming utf-8 encoding).
-pub fn parse_file(format: SubtitleFormat, content: &[u8]) -> Result<Box<ClonableSubtitleFile>> {
+pub fn parse_bytes(format: SubtitleFormat, content: &[u8]) -> Result<Box<ClonableSubtitleFile>> {
     match format {
-        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(content)?)),
-        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(content)?)),
-        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(content)?)),
+        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(&String::from_utf8(content.to_vec())?)?)),
+        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(&String::from_utf8(content.to_vec())?)?)),
+        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(&String::from_utf8(content.to_vec())?)?)),
         SubtitleFormat::VobSubSub => Ok(Box::new(vobsub::VobFile::parse(content)?)),
-        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(content)?)),
+        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(&String::from_utf8(content.to_vec())?)?)),
     }
 }

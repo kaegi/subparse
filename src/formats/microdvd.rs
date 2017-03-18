@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use {ParseSubtitleString, SubtitleEntry, SubtitleFile};
+use {SubtitleEntry, SubtitleFile};
 use errors::Result as SubtitleParserResult;
 use formats::common::*;
 use timetypes::{TimePoint, TimeSpan};
@@ -125,9 +125,10 @@ impl MdvdLine {
     }
 }
 
-impl ParseSubtitleString for MdvdFile {
-    fn parse_from_string(s: String) -> SubtitleParserResult<MdvdFile> {
-        let file_opt = Self::parse_file(s.as_str());
+impl MdvdFile {
+    /// Parse a MicroDVD `.sub` subtitle string to `MdvdFile`.
+    pub fn parse(s: &str) -> SubtitleParserResult<MdvdFile> {
+        let file_opt = Self::parse_file(s);
         match file_opt {
             Ok(file) => Ok(file),
             Err(err) => Err(err.into()),
@@ -349,7 +350,7 @@ mod tests {
 
     /// Parse string with `MdvdFile`, and reencode it with `MdvdFile`.
     fn mdvd_reconstruct(s: &str) -> String {
-        let file = MdvdFile::parse_from_string(s.to_string()).unwrap();
+        let file = MdvdFile::parse(s).unwrap();
         let data = file.to_data().unwrap();
         String::from_utf8(data).unwrap()
     }
