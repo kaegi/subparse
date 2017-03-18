@@ -52,8 +52,8 @@ impl VobFile {
                 // only extract the timestamps, discard the big image data
                 Ok(VobSubSubtitle {
                     timespan: TimeSpan {
-                        start: TimePoint::from_msecs((sub.start_time * 1000.0) as i64),
-                        end: TimePoint::from_msecs((sub.end_time * 1000.0) as i64),
+                        start: TimePoint::from_msecs((sub.start_time() * 1000.0) as i64),
+                        end: TimePoint::from_msecs((sub.end_time() * 1000.0) as i64),
                     },
                 })
             })

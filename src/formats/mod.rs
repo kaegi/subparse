@@ -47,34 +47,61 @@ impl SubtitleFormat {
 }
 
 
-/// Returns the subtitle format by the file ending (`Option` as return type).
+/// Returns the subtitle format by the file ending.
 ///
 /// Calling the function with the full file path or simply a `get_subtitle_format_by_ending(".srt")`
-/// both work. Returns `None` if subtitle format could not be reckognized.
-pub fn get_subtitle_format_by_ending(path: &str) -> Option<SubtitleFormat> {
+/// both work. Returns `None` if subtitle format could not be recognized.
+///
+/// Because the `.sub` file ending is ambiguous (both MicroDVD and VobSub use that ending) the
+/// function will return `None` in that case. Instead, use the content-aware `get_subtitle_format`
+/// to handle this case correctly.
+pub fn get_subtitle_format_by_ending(ending: &str) -> Option<SubtitleFormat> {
 
-    if path.ends_with(".srt") {
+    if ending.ends_with(".srt") {
         Some(SubtitleFormat::SubRip)
-    } else if path.ends_with(".ssa") || path.ends_with(".ass") {
+    } else if ending.ends_with(".ssa") || ending.ends_with(".ass") {
         Some(SubtitleFormat::SubStationAlpha)
-    } else if path.ends_with(".idx") {
+    } else if ending.ends_with(".idx") {
         Some(SubtitleFormat::VobSubIdx)
-    } else if path.ends_with(".sub") {
-        Some(SubtitleFormat::MicroDVD)
     } else {
         None
     }
 }
 
-/// Returns the subtitle format by the file ending (`Result` as return type).
+/// Returns the subtitle format by the file ending.
 ///
-/// Calling the function with the full file path or simply a `get_subtitle_format_by_ending(".srt")`
-/// both work. Returns `UnknownFileFormat` if subtitle format could not be reckognized.
-pub fn get_subtitle_format_by_ending_err(path: &str) -> Result<SubtitleFormat> {
-    match get_subtitle_format_by_ending(path) {
-        Some(format) => Ok(format),
-        None => Err(Error::from(ErrorKind::UnknownFileFormat)),
+/// Works exactly like `get_subtitle_format_by_ending`, but instead of `None` a `UnknownFileFormat`
+/// will be returned (for simpler error handling).
+pub fn get_subtitle_format_by_ending_err(ending: &str) -> Result<SubtitleFormat> {
+    get_subtitle_format_by_ending(ending).ok_or(ErrorKind::UnknownFileFormat.into())
+}
+
+/// Returns the subtitle format by the file ending and provided content.
+///
+/// Calling the function with the full file path or simply a `get_subtitle_format(".sub", content)`
+/// both work. Returns `None` if subtitle format could not be recognized.
+///
+/// It works exactly the same as `get_subtitle_format_by_ending` (see documentation), but also handles the  `.sub` cases
+/// correctly by using the provided content of the file as secondary info.
+pub fn get_subtitle_format(ending: &str, content: &[u8]) -> Option<SubtitleFormat> {
+    if ending.ends_with(".sub") {
+        // test for VobSub .sub magic number
+        if content.iter().take(4).cloned().eq([0x00, 0x00, 0x01, 0xba].iter().cloned()) {
+            Some(SubtitleFormat::VobSubSub)
+        } else {
+            Some(SubtitleFormat::MicroDVD)
+        }
+    } else {
+        get_subtitle_format_by_ending(ending)
     }
+}
+
+/// Returns the subtitle format by the file ending and provided content.
+///
+/// Works exactly like `get_subtitle_format`, but instead of `None` a `UnknownFileFormat`
+/// will be returned (for simpler error handling).
+pub fn get_subtitle_format_err(ending: &str, content: &[u8]) -> Result<SubtitleFormat> {
+    get_subtitle_format(ending, content).ok_or(ErrorKind::UnknownFileFormat.into())
 }
 
 // This trick works around the limitation, that trait objects can not require Sized (or Clone).

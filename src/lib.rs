@@ -37,7 +37,8 @@ pub use formats::ssa::SsaFile;
 pub use formats::vobsub::VobFile;
 pub use formats::microdvd::MdvdFile;
 pub use formats::SubtitleFormat;
-pub use formats::{get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, parse_bytes, parse_str};
+pub use formats::{get_subtitle_format, get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, get_subtitle_format_err, parse_bytes,
+                  parse_str};
 
 use errors::*;
 use timetypes::TimeSpan;
