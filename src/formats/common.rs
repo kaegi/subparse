@@ -122,7 +122,9 @@ pub fn get_lines_non_destructive(s: &str) -> Vec<SplittedLine> {
     let mut result = Vec::new();
     let mut rest = s;
     loop {
-        if rest.is_empty() { return result; }
+        if rest.is_empty() {
+            return result;
+        }
 
         match rest.char_indices().find(|&(_, c)| c == '\r' || c == '\n') {
             Some((idx, _)) => {

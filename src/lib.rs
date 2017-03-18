@@ -11,7 +11,7 @@
 
 
 
-//! This crate provides a common interface for popular subtitle formats (`.srt`, `.ssa`, `.ass`, `.idx`).
+//! This crate provides a common interface for popular subtitle formats (`.srt`, `.ssa`, `.ass`, `.idx`, `.sub`).
 //!
 //! Files can be parsed, modified and saved again - some formats can be created from scratch.
 //! The focus is on non-destructive parsing, meaning that formatting and other information are preserved
@@ -21,6 +21,7 @@
 extern crate error_chain;
 extern crate combine;
 extern crate vobsub;
+extern crate itertools;
 
 mod formats;
 
@@ -34,6 +35,7 @@ pub use formats::srt::SrtFile;
 pub use formats::idx::IdxFile;
 pub use formats::ssa::SsaFile;
 pub use formats::vobsub::VobFile;
+pub use formats::microdvd::MdvdFile;
 pub use formats::SubtitleFormat;
 pub use formats::{get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, parse_file, parse_file_from_string};
 
@@ -99,6 +101,7 @@ pub struct SubtitleEntry {
     /// The duration for which the current subtitle will be shown.
     pub timespan: TimeSpan,
 
+    // TODO: to Vec<String>
     /// The text which will be shown in this subtitle. Be aware that
     /// for example VobSub files (and any other image based format)
     /// will have `None` as value.

@@ -1,8 +1,15 @@
 # Introduction
 
-`subparse` is a Rust library that lets use load, change and store subtitle files in various formats (`srt`, `ssa`/`ass`, `idx`). Formatting and other data will be preserved.
+`subparse` is a Rust library that lets use load, change and store subtitle files in various formats. Formatting and other data will be preserved.
 
-You can find an example how to use this library under `examples/example1.rs`.
+You can find an examples how to use this library under `examples/`.
+
+Currently supported are:
+
+-   SubStationAlpha `.ssa`/`.ass`
+-   MicroDVD `.sub`
+-   SubRip `.srt`
+-   VobSub `.idx` and `.sub`
 
 [Documentation](https://docs.rs/subparse)
 

@@ -2,7 +2,7 @@
 name = "subparse"
 version = "0.1.0"
 authors = ["kaegi <kaegi.dev@gmail.com>"]
-description = "Load, change and write common subtitle formats (srt/ass/idx)"
+description = "Load, change and write common subtitle formats (srt/ass/idx/sub)"
 repository = "https://github.com/kaegi/subparse"
 documentation = "https://docs.rs/subparse"
 readme = "README.md"
@@ -14,3 +14,4 @@ license = "MPL-2.0"
 error-chain = "~0.10.0"
 combine = "~2.3.1"
 vobsub = "~0.1.2"
+itertools = "0.5.9"

@@ -9,6 +9,7 @@ pub use formats::srt::errors as srt_errors;
 pub use formats::ssa::errors as ssa_errors;
 pub use formats::idx::errors as idx_errors;
 pub use formats::vobsub::errors as vob_errors;
+pub use formats::microdvd::errors as mdvd_errors;
 
 // see https://docs.rs/error-chain/0.8.1/error_chain/
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -35,6 +36,10 @@ error_chain! {
 
         VobError(vob_errors::Error, vob_errors::ErrorKind)
         /// Parsing a `.sub` (VobSub) file failed.
+        ;
+
+        MdvdError(mdvd_errors::Error, mdvd_errors::ErrorKind)
+        /// Parsing a `.sub` (MicroDVD) file failed.
         ;
     }
 

@@ -6,6 +6,7 @@
 pub mod srt;
 pub mod ssa;
 pub mod idx;
+pub mod microdvd;
 pub mod vobsub;
 pub mod common;
 
@@ -26,8 +27,11 @@ pub enum SubtitleFormat {
     /// .idx file
     VobSubIdx,
 
-    /// .sub file (VobSub)
+    /// .sub file (VobSub/binary)
     VobSubSub,
+
+    /// .sub file (MicroDVD/text)
+    MicroDVD,
 }
 
 impl SubtitleFormat {
@@ -38,6 +42,7 @@ impl SubtitleFormat {
             SubtitleFormat::SubStationAlpha => ".ssa (SubStation Alpha)",
             SubtitleFormat::VobSubIdx => ".idx (VobSub)",
             SubtitleFormat::VobSubSub => ".sub (VobSub)",
+            SubtitleFormat::MicroDVD => ".sub (MicroDVD)",
         }
     }
 }
@@ -56,7 +61,7 @@ pub fn get_subtitle_format_by_ending(path: &str) -> Option<SubtitleFormat> {
     } else if path.ends_with(".idx") {
         Some(SubtitleFormat::VobSubIdx)
     } else if path.ends_with(".sub") {
-        Some(SubtitleFormat::VobSubSub)
+        Some(SubtitleFormat::MicroDVD)
     } else {
         None
     }
@@ -94,6 +99,7 @@ pub fn parse_file_from_string(format: SubtitleFormat, content: String) -> Result
         SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse_from_string(content)?)),
         SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse_from_string(content)?)),
         SubtitleFormat::VobSubSub => Err(ErrorKind::TextFormatOnly.into()),
+        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse_from_string(content)?)),
     }
 }
 
@@ -106,5 +112,6 @@ pub fn parse_file(format: SubtitleFormat, content: &[u8]) -> Result<Box<Clonable
         SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(content)?)),
         SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(content)?)),
         SubtitleFormat::VobSubSub => Ok(Box::new(vobsub::VobFile::parse(content)?)),
+        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(content)?)),
     }
 }
