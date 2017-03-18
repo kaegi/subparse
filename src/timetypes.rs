@@ -41,24 +41,40 @@ impl Timing {
         self.0
     }
 
+    fn csecs(&self) -> i64 {
+        self.0 / 10
+    }
+
+    fn secs(&self) -> i64 {
+        self.0 / 1000
+    }
+
+    fn secs_f64(&self) -> f64 {
+        self.0 as f64 / 1000.0
+    }
+
+    fn mins(&self) -> i64 {
+        self.0 / (60 * 1000)
+    }
+
     fn hours(&self) -> i64 {
         self.0 / (60 * 60 * 1000)
     }
 
     fn mins_comp(&self) -> i64 {
-        (self.0 / (60 * 1000)) % 60
+        self.mins() % 60
     }
 
     fn secs_comp(&self) -> i64 {
-        (self.0 / 1000) % 60
+        self.secs() % 60
     }
 
     fn csecs_comp(&self) -> i64 {
-        ((self.0 / 10) % 100)
+        self.csecs() % 100
     }
 
     fn msecs_comp(&self) -> i64 {
-        (self.0 % 1000)
+        self.msecs() % 1000
     }
 
     fn is_negative(&self) -> bool {
@@ -181,17 +197,22 @@ macro_rules! create_time_type {
 
             /// Get the total number of hundreth seconds.
             pub fn csecs(&self) -> i64 {
-                self.intern.msecs()
+                self.intern.csecs()
             }
 
             /// Get the total number of seconds.
             pub fn secs(&self) -> i64 {
-                self.intern.msecs()
+                self.intern.secs()
+            }
+
+            /// Get the total number of seconds.
+            pub fn secs_f64(&self) -> f64 {
+                self.intern.secs_f64()
             }
 
             /// Get the total number of seconds.
             pub fn mins(&self) -> i64 {
-                self.intern.msecs()
+                self.intern.mins()
             }
 
             /// Get the total number of hours.
