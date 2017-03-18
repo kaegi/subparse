@@ -1,6 +1,6 @@
 [package]
 name = "subparse"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["kaegi <kaegi.dev@gmail.com>"]
 description = "Load, change and write common subtitle formats (srt/ass/idx/sub)"
 repository = "https://github.com/kaegi/subparse"
