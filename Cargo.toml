@@ -7,7 +7,7 @@ repository = "https://github.com/kaegi/subparse"
 documentation = "https://docs.rs/subparse"
 readme = "README.md"
 keywords = ["subtitle", "parse", "library", "write"]
-license = "LGPL-3.0"
+license = "MPL-2.0"
 
 
 [dependencies]
