@@ -135,10 +135,10 @@ pub fn get_lines_non_destructive(s: &str) -> Vec<SplittedLine> {
                 if rest.starts_with("\r\n") {
                     result.push((line, "\r\n".to_string()));
                     rest = &rest[2..];
-                } else if rest.starts_with("\n") {
+                } else if rest.starts_with('\n') {
                     result.push((line, "\n".to_string()));
                     rest = &rest[1..];
-                } else if rest.starts_with("\r") {
+                } else if rest.starts_with('\r') {
                     // we only treat this as valid line ending to avoid error handling
                     result.push((line, "\r".to_string()));
                     rest = &rest[1..];

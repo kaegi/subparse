@@ -149,7 +149,7 @@ impl SubtitleFile for IdxFile {
 impl IdxFile {
     /// Parse a `.idx` subtitle string to `IdxFile`.
     pub fn parse(s: &str) -> SubtitleParserResult<IdxFile> {
-        match IdxFile::parse_inner(&s) {
+        match IdxFile::parse_inner(s) {
             Ok(v) => Ok(v),
             Err(e) => Err(e.into()),
         }

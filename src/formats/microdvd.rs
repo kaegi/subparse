@@ -19,7 +19,7 @@ use combine::char::char;
 use combine::combinator::{eof, many, parser as p, satisfy, sep_by};
 use combine::primitives::Parser;
 
-/// `.sub`(MicroDVD)-parser-specific errors
+/// `.sub`(`MicroDVD`)-parser-specific errors
 #[allow(missing_docs)]
 pub mod errors {
     // see https://docs.rs/error-chain/0.8.1/error_chain/
@@ -54,7 +54,7 @@ impl From<String> for MdvdFormatting {
 
 impl MdvdFormatting {
     /// Is this a single line formatting (e.g. `y:i`) or a multi-line formatting (e.g `Y:i`)?
-    fn is_container_line_formatting(f: &String) -> bool {
+    fn is_container_line_formatting(f: &str) -> bool {
         f.chars().next().and_then(|c| Some(c.is_uppercase())).unwrap_or(false)
     }
 
@@ -82,18 +82,19 @@ impl MdvdFormatting {
         }
     }
 
-    ///
+    /// Convert a `MdvdFormatting` to a string which can be used in `.sub` files.
     fn to_formatting_string(&self, multiline: bool) -> String {
         let s = self.to_formatting_string_intern();
-        match multiline {
-            true => Self::uppercase_first_char(&s),
-            false => Self::lowercase_first_char(&s),
+        if multiline {
+            Self::uppercase_first_char(&s)
+        } else {
+            Self::lowercase_first_char(&s)
         }
     }
 }
 
 #[derive(Debug, Clone)]
-/// Represents a reconstructable `.sub`(MicroDVD) file.
+/// Represents a reconstructable `.sub`(`MicroDVD`) file.
 pub struct MdvdFile {
     /// Number of frames per second of the accociated video (default 25)
     /// -> start/end frames can be coverted to timestamps
@@ -130,7 +131,7 @@ impl MdvdLine {
 }
 
 impl MdvdFile {
-    /// Parse a MicroDVD `.sub` subtitle string to `MdvdFile`.
+    /// Parse a `MicroDVD` `.sub` subtitle string to `MdvdFile`.
     pub fn parse(s: &str, fps: f64) -> SubtitleParserResult<MdvdFile> {
         let file_opt = Self::parse_file(s, fps);
         match file_opt {
@@ -151,7 +152,7 @@ impl MdvdFile {
         for (line_num, line) in s.lines().enumerate() {
             // a line looks like "{0}{25}{c:$0000ff}{y:b,u}{f:DeJaVuSans}{s:12}Hello!|{y:i}Hello2!" where
             // 0 and 25 are the start and end frames and the other information is the formatting.
-            let mut lines: Vec<MdvdLine> = Self::parse_line(line_num, &line)?;
+            let mut lines: Vec<MdvdLine> = Self::parse_line(line_num, line)?;
             result.append(&mut lines);
         }
 
@@ -215,13 +216,14 @@ impl MdvdFile {
                       .collect()
     }
 
-    /// Convert MicroDVD formatting strings to `MdvdFormatting` objects.
+    /// Convert `MicroDVD` formatting strings to `MdvdFormatting` objects.
     ///
     /// Move multiline formattings and single line formattings into different vectors.
     fn string_to_formatting(multiline_formatting: &mut Vec<MdvdFormatting>, fmts: Vec<String>) -> Vec<MdvdFormatting> {
 
         // split multiline-formatting (e.g "Y:b") and single-line formatting (e.g "y:b")
-        let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) = fmts.into_iter().partition(MdvdFormatting::is_container_line_formatting);
+        let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) = fmts.into_iter()
+                                                                     .partition(|fmt_str| MdvdFormatting::is_container_line_formatting(fmt_str));
 
         multiline_formatting.extend(&mut cline_fmts_str.into_iter().map(MdvdFormatting::from));
         sline_fmts_str.into_iter().map(MdvdFormatting::from).collect()
@@ -285,7 +287,7 @@ impl SubtitleFile for MdvdFile {
                 formattings.iter()
                            .fold(None, |acc, set| match acc {
                                None => Some(set.clone()),
-                               Some(acc_set) => Some(acc_set.intersection(&set).cloned().collect()),
+                               Some(acc_set) => Some(acc_set.intersection(set).cloned().collect()),
                            })
                            .unwrap()
             };
@@ -343,7 +345,7 @@ mod tests {
         String::from_utf8(data).unwrap()
     }
 
-    /// Parse and re-construct MicroDVD files and test them against expected output.
+    /// Parse and re-construct `MicroDVD` files and test them against expected output.
     fn test_mdvd(input: &str, expected: &str) {
         // if we put the `input` into the parser, we expect a specific (cleaned-up) output
         assert_eq!(mdvd_reconstruct(input), expected);

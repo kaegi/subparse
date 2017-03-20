@@ -61,7 +61,7 @@ pub struct SrtFile {
 }
 
 #[derive(Debug, Clone)]
-/// A complete description of one SubRip subtitle line.
+/// A complete description of one `SubRip` subtitle line.
 struct SrtLine {
     /// start and end time of subtitle
     timespan: TimeSpan,

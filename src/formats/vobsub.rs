@@ -10,7 +10,7 @@ use self::errors::*;
 
 use vobsub;
 
-/// `.sub` VobSub-parser-specific errors
+/// `.sub` `VobSub`-parser-specific errors
 #[allow(missing_docs)]
 pub mod errors {
     use vobsub;
@@ -27,7 +27,7 @@ pub mod errors {
 
 
 #[derive(Debug, Clone)]
-/// Represents a `.sub` (VobSub) file.
+/// Represents a `.sub` (`VobSub`) file.
 pub struct VobFile {
     /// Saves the file data.
     data: Vec<u8>,
@@ -37,13 +37,13 @@ pub struct VobFile {
 }
 
 #[derive(Debug, Clone)]
-/// Represents a line in a VobSub `.sub` file.
+/// Represents a line in a `VobSub` `.sub` file.
 struct VobSubSubtitle {
     timespan: TimeSpan,
 }
 
 impl VobFile {
-    /// Parse contents of a VobSub `.sub` file to `VobFile`.
+    /// Parse contents of a `VobSub` `.sub` file to `VobFile`.
     pub fn parse(b: &[u8]) -> SubtitleParserResult<Self> {
         let lines = vobsub::subtitles(b)
             .map(|sub_res| -> vobsub::Result<VobSubSubtitle> {
@@ -58,7 +58,7 @@ impl VobFile {
                 })
             })
             .collect::<vobsub::Result<Vec<VobSubSubtitle>>>()
-            .map_err(|e| Error::from(e))?;
+            .map_err(Error::from)?;
 
         Ok(VobFile {
             data: b.to_vec(),

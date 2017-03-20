@@ -26,10 +26,10 @@ pub enum SubtitleFormat {
     /// .idx file
     VobSubIdx,
 
-    /// .sub file (VobSub/binary)
+    /// .sub file (`VobSub`/binary)
     VobSubSub,
 
-    /// .sub file (MicroDVD/text)
+    /// .sub file (`MicroDVD`/text)
     MicroDVD,
 }
 
@@ -52,7 +52,7 @@ impl SubtitleFormat {
 /// Calling the function with the full file path or simply a `get_subtitle_format_by_ending(".srt")`
 /// both work. Returns `None` if subtitle format could not be recognized.
 ///
-/// Because the `.sub` file ending is ambiguous (both MicroDVD and VobSub use that ending) the
+/// Because the `.sub` file ending is ambiguous (both `MicroDVD` and `VobSub` use that ending) the
 /// function will return `None` in that case. Instead, use the content-aware `get_subtitle_format`
 /// to handle this case correctly.
 pub fn get_subtitle_format_by_ending(ending: &str) -> Option<SubtitleFormat> {
@@ -73,7 +73,7 @@ pub fn get_subtitle_format_by_ending(ending: &str) -> Option<SubtitleFormat> {
 /// Works exactly like `get_subtitle_format_by_ending`, but instead of `None` a `UnknownFileFormat`
 /// will be returned (for simpler error handling).
 pub fn get_subtitle_format_by_ending_err(ending: &str) -> Result<SubtitleFormat> {
-    get_subtitle_format_by_ending(ending).ok_or(ErrorKind::UnknownFileFormat.into())
+    get_subtitle_format_by_ending(ending).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
 }
 
 /// Returns the subtitle format by the file ending and provided content.
@@ -101,7 +101,7 @@ pub fn get_subtitle_format(ending: &str, content: &[u8]) -> Option<SubtitleForma
 /// Works exactly like `get_subtitle_format`, but instead of `None` a `UnknownFileFormat`
 /// will be returned (for simpler error handling).
 pub fn get_subtitle_format_err(ending: &str, content: &[u8]) -> Result<SubtitleFormat> {
-    get_subtitle_format(ending, content).ok_or(ErrorKind::UnknownFileFormat.into())
+    get_subtitle_format(ending, content).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
 }
 
 // This trick works around the limitation, that trait objects can not require Sized (or Clone).
@@ -143,7 +143,7 @@ pub fn parse_str(format: SubtitleFormat, content: &str, fps: f64) -> Result<Box<
 /// a specific format that has no additional paramters, you can use the `parse` function of
 /// the respective `***File` struct.
 ///
-/// `fps`: this paramter is used for MicroDVD `.sub` files. These files do not store timestamps in
+/// `fps`: this paramter is used for `MicroDVD` `.sub` files. These files do not store timestamps in
 /// seconds/minutes/... but in frame numbers. So the timing `0 to 30` means "show subtitle for one second"
 /// for a 30fps video, and "show subtitle for half second" for 60fps videos. The parameter specifies how
 /// frame numbers are converted into timestamps.
