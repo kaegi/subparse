@@ -9,7 +9,6 @@ use timetypes::{TimePoint, TimeSpan};
 use self::errors::ErrorKind::*;
 use self::errors::*;
 
-use std;
 use std::collections::LinkedList;
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -17,8 +16,8 @@ use std::collections::HashSet;
 use itertools::Itertools;
 
 use combine::char::char;
-use combine::combinator::{eof, many, parser as p, satisfy, sep_by, try};
-use combine::primitives::{ParseError, ParseResult, Parser, Stream};
+use combine::combinator::{eof, many, parser as p, satisfy, sep_by};
+use combine::primitives::Parser;
 
 /// `.sub`(MicroDVD)-parser-specific errors
 #[allow(missing_docs)]
@@ -28,8 +27,8 @@ pub mod errors {
     // the other parsers
     error_chain! {
         errors {
-            LineParserError(line_num: usize, msg: String) {
-                display("parse error at line `{}` because of `{}`", line_num, msg)
+            ExpectedSubtitleLine(line: String) {
+                display("expected subtittle line, found `{}`", line)
             }
             ErrorAtLine(line_num: usize) {
                 display("parse error at line `{}`", line_num)
@@ -54,6 +53,11 @@ impl From<String> for MdvdFormatting {
 }
 
 impl MdvdFormatting {
+    /// Is this a single line formatting (e.g. `y:i`) or a multi-line formatting (e.g `Y:i`)?
+    fn is_container_line_formatting(f: &String) -> bool {
+        f.chars().next().and_then(|c| Some(c.is_uppercase())).unwrap_or(false)
+    }
+
     /// Applies `to_lowercase()` to first char, leaves the rest of the characters untouched.
     fn lowercase_first_char(s: &str) -> String {
         let mut c = s.chars();
@@ -147,7 +151,7 @@ impl MdvdFile {
         for (line_num, line) in s.lines().enumerate() {
             // a line looks like "{0}{25}{c:$0000ff}{y:b,u}{f:DeJaVuSans}{s:12}Hello!|{y:i}Hello2!" where
             // 0 and 25 are the start and end frames and the other information is the formatting.
-            let mut lines: Vec<MdvdLine> = Self::get_line(line_num, &line)?;
+            let mut lines: Vec<MdvdLine> = Self::parse_line(line_num, &line)?;
             result.append(&mut lines);
         }
 
@@ -157,52 +161,28 @@ impl MdvdFile {
         })
     }
 
-    /// Matches a line in the text file which might correspond to multiple subtitle entries.
-    fn get_line(line_num: usize, s: &str) -> Result<Vec<MdvdLine>> {
-        Self::handle_error(p(Self::parse_container_line).parse(s), line_num)
-    }
-
-    /// Convert a result/error from the combine library to the srt parser error.
-    fn handle_error<T>(r: std::result::Result<(T, &str), ParseError<&str>>, line_num: usize) -> Result<T> {
-        r.map(|(v, _)| v)
-         .map_err(|_| Error::from(ErrorAtLine(line_num)))
-    }
-
-
-    /// Matches the regex "\{[^}]*\}"; parses something like "{some_info}".
-    fn parse_sub_info<I>(input: I) -> ParseResult<String, I>
-        where I: Stream<Item = char>
-    {
-        (char('{'), many(satisfy(|c| c != '}')), char('}'))
-            .map(|(_, info, _): (_, String, _)| info)
-            .expected("MicroDVD info")
-            .parse_stream(input)
-    }
-
-    // Parses something like "{C:$0000ff}{y:b,u}{f:DeJaVuSans}{s:12}Hello!"
-    //
-    // Returns the a tuple of the multiline-formatting, the single-line formatting and the text of the single line.
-    fn parse_single_line<I>(input: I) -> ParseResult<(Vec<String>, String), I>
-        where I: Stream<Item = char>
-    {
-        // the '|' char splits single lines
-        (many(try(p(Self::parse_sub_info))), many(satisfy(|c| c != '|'))).parse_stream(input)
-    }
-
-    fn is_container_line_formatting(f: &String) -> bool {
-        f.chars().next().and_then(|c| Some(c.is_uppercase())).unwrap_or(false)
-    }
-
     // Parses something like "{0}{25}{C:$0000ff}{y:b,u}{f:DeJaVuSans}{s:12}Hello!|{s:15}Hello2!"
-    fn parse_container_line<I>(input: I) -> ParseResult<Vec<MdvdLine>, I>
-        where I: Stream<Item = char>
-    {
+    fn parse_line(line_num: usize, line: &str) -> Result<Vec<MdvdLine>> {
+
+        /// Matches the regex "\{[^}]*\}"; parses something like "{some_info}".
+        let sub_info = (char('{'), many(satisfy(|c| c != '}')), char('}'))
+            .map(|(_, info, _): (_, String, _)| info)
+            .expected("MicroDVD info");
+
+        // Parse a single line (until separator '|'), something like "{C:$0000ff}{y:b,u}{f:DeJaVuSans}{s:12}Hello!"
+        // Returns the a tuple of the multiline-formatting, the single-line formatting and the text of the single line.
+        let single_line = (many(sub_info), many(satisfy(|c| c != '|')));
+
         // the '|' char splits single lines
-        (char('{'), p(number_i64), char('}'), char('{'), p(number_i64), char('}'), sep_by(p(Self::parse_single_line), char('|')), eof())
-            .map(|(_, start_frame, _, _, end_frame, _, fmt_strs_and_lines, ()): (_, i64, _, _, i64, _, Vec<(Vec<String>, String)>, ())| {
+        (char('{'), p(number_i64), char('}'), char('{'), p(number_i64), char('}'), sep_by(single_line, char('|')), eof())
+            .map(|(_, start_frame, _, _, end_frame, _, fmt_strs_and_lines, ())| (start_frame, end_frame, fmt_strs_and_lines))
+            .map(|(start_frame, end_frame, fmt_strs_and_lines): (i64, i64, Vec<(Vec<String>, String)>)| {
                 Self::construct_mdvd_lines(start_frame, end_frame, fmt_strs_and_lines)
             })
-            .parse_stream(input)
+            .parse(line)
+            .map(|x| x.0)
+            .map_err(|_| Error::from(ExpectedSubtitleLine(line.to_string())))
+            .chain_err(|| ErrorAtLine(line_num))
     }
 
     /// Construct (possibly multiple) `MdvdLines` from a deconstructed file line
@@ -219,7 +199,7 @@ impl MdvdFile {
         let fmts_and_lines: Vec<(Vec<MdvdFormatting>, String)> = fmt_strs_and_lines.into_iter()
                                                                                    .map(|(fmts, text)| {
             // split multiline-formatting (e.g "Y:b") and single-line formatting (e.g "y:b")
-            let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) = fmts.into_iter().partition(Self::is_container_line_formatting);
+            let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) = fmts.into_iter().partition(MdvdFormatting::is_container_line_formatting);
             cline_fmts.extend(&mut cline_fmts_str.into_iter().map(MdvdFormatting::from));
 
             (sline_fmts_str.into_iter().map(MdvdFormatting::from).collect(), text)
