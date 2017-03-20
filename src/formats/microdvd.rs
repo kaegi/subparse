@@ -196,17 +196,13 @@ impl MdvdFile {
         let mut cline_fmts: Vec<MdvdFormatting> = Vec::new();
 
         // convert the formatting strings to `MdvdFormatting` objects and split between multi-line and single-line formatting
-        let fmts_and_lines: Vec<(Vec<MdvdFormatting>, String)> = fmt_strs_and_lines.into_iter()
-                                                                                   .map(|(fmts, text)| {
-            // split multiline-formatting (e.g "Y:b") and single-line formatting (e.g "y:b")
-            let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) = fmts.into_iter().partition(MdvdFormatting::is_container_line_formatting);
-            cline_fmts.extend(&mut cline_fmts_str.into_iter().map(MdvdFormatting::from));
+        let fmts_and_lines = fmt_strs_and_lines.into_iter()
+                                               .map(|(fmts, text)| (Self::string_to_formatting(&mut cline_fmts, fmts), text))
+                                               .collect::<Vec<_>>();
 
-            (sline_fmts_str.into_iter().map(MdvdFormatting::from).collect(), text)
-        })
-                                                                                   .collect();
+        // now we also have all multi-line formattings in `cline_fmts`
 
-        // now we also have all multi-line formattings
+        // finish creation of `MdvdLine`s
         fmts_and_lines.into_iter()
                       .map(|(sline_fmts, text)| {
             MdvdLine {
@@ -217,6 +213,18 @@ impl MdvdFile {
             }
         })
                       .collect()
+    }
+
+    /// Convert MicroDVD formatting strings to `MdvdFormatting` objects.
+    ///
+    /// Move multiline formattings and single line formattings into different vectors.
+    fn string_to_formatting(multiline_formatting: &mut Vec<MdvdFormatting>, fmts: Vec<String>) -> Vec<MdvdFormatting> {
+
+        // split multiline-formatting (e.g "Y:b") and single-line formatting (e.g "y:b")
+        let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) = fmts.into_iter().partition(MdvdFormatting::is_container_line_formatting);
+
+        multiline_formatting.extend(&mut cline_fmts_str.into_iter().map(MdvdFormatting::from));
+        sline_fmts_str.into_iter().map(MdvdFormatting::from).collect()
     }
 }
 
