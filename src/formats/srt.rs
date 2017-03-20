@@ -10,14 +10,13 @@ use timetypes::{TimePoint, TimeSpan};
 use self::errors::ErrorKind::*;
 use self::errors::*;
 
-use std;
 use std::iter::once;
 
 use itertools::Itertools;
 
 use combine::char::{char, string};
-use combine::combinator::{eof, many, parser as p};
-use combine::primitives::{ParseError, ParseResult, Parser};
+use combine::combinator::{eof, parser as p, skip_many};
+use combine::primitives::Parser;
 
 /// `.srt`-parser-specific errors
 #[allow(missing_docs)]
@@ -101,7 +100,7 @@ impl SrtFile {
         for (line_num, line) in s.lines().chain(once("")).enumerate() {
             state = match state {
                 Emptyline => if line.trim().is_empty() { Emptyline } else { Index(Self::parse_index_line(line_num, line)?) },
-                Index(index) => Timing(index, Self::parse_timestamp_line(line_num, line)?),
+                Index(index) => Timing(index, Self::parse_timespan_line(line_num, line)?),
                 Timing(index, timespan) => Self::state_expect_dialog(line, &mut result, index, timespan, Vec::new()),
                 Dialog(index, timespan, texts) => Self::state_expect_dialog(line, &mut result, index, timespan, texts),
             };
@@ -126,38 +125,28 @@ impl SrtFile {
 
     /// Matches a line with a single index.
     fn parse_index_line(line_num: usize, s: &str) -> Result<i64> {
-        s.trim().parse::<i64>().chain_err(|| ExpectedIndexLine(s.to_string())).chain_err(|| ErrorAtLine(line_num))
-    }
-
-    /// Convert a result/error from the combine library to the srt parser error.
-    fn handle_error<T, F>(r: std::result::Result<(T, &str), ParseError<&str>>, line_num: usize, err_func: F) -> Result<T>
-        where F: FnOnce() -> Error
-    {
-        r.map(|(v, _)| v)
-         .map_err(|_| err_func())
-         .chain_err(|| Error::from(ErrorAtLine(line_num)))
-    }
-
-
-    /// Matches a `SubRip` timestamp like "00:24:45,670"
-    fn parse_timestamp(input: &str) -> ParseResult<TimePoint, &str> {
-        (p(number_i64), char(':'), p(number_i64), char(':'), p(number_i64), char(','), p(number_i64))
-            .map(|t| TimePoint::from_components(t.0, t.2, t.4, t.6))
-            .parse_stream(input)
+        s.trim()
+         .parse::<i64>()
+         .chain_err(|| ExpectedIndexLine(s.to_string()))
+         .chain_err(|| ErrorAtLine(line_num))
     }
 
     /// Matches a `SubRip` timespan like "00:24:45,670 --> 00:24:45,680".
-    fn parse_timespan(input: &str) -> ParseResult<TimeSpan, &str> {
-        (many(ws()), p(Self::parse_timestamp), many(ws()), string("-->"), many(ws()), p(Self::parse_timestamp), many(ws()), eof())
-            .map(|t: (String, _, String, _, String, _, String, _)| TimeSpan::new(t.1, t.5))
-            .parse_stream(input)
-    }
+    fn parse_timespan_line(line_num: usize, line: &str) -> Result<TimeSpan> {
 
-    /// Matches a `SubRip` timespan line like "00:24:45,670 --> 00:24:45,680".
-    fn parse_timestamp_line(line_num: usize, s: &str) -> Result<TimeSpan> {
-        Self::handle_error(p(Self::parse_timespan).parse(s),
-                           line_num,
-                           || ExpectedTimestampLine(s.to_string()).into())
+        /// Matches a `SubRip` timestamp like "00:24:45,670"
+        let timestamp = |s| {
+            (p(number_i64), char(':'), p(number_i64), char(':'), p(number_i64), char(','), p(number_i64))
+                .map(|t| TimePoint::from_components(t.0, t.2, t.4, t.6))
+                .parse_stream(s)
+        };
+
+        (skip_many(ws()), p(&timestamp), skip_many(ws()), string("-->"), skip_many(ws()), p(&timestamp), skip_many(ws()), eof())
+            .map(|t| TimeSpan::new(t.1, t.5))
+            .parse(line)
+            .map(|x| x.0)
+            .map_err(|_| Error::from(ExpectedTimestampLine(line.to_string())))
+            .chain_err(|| ErrorAtLine(line_num))
     }
 }
 
