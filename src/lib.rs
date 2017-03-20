@@ -15,7 +15,7 @@
 //!
 //! Files can be parsed, modified and saved again - some formats can be created from scratch.
 //! The focus is on non-destructive parsing, meaning that formatting and other information are preserved
-//! if not explicitely changed. Note that not all features of a specific subtitle format are supported.
+//! if not explicitely changed.
 
 #[macro_use]
 extern crate error_chain;
