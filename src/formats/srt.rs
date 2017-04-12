@@ -3,20 +3,20 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-use {SubtitleEntry, SubtitleFile};
-use errors::Result as SubtitleParserResult;
-use formats::common::*;
-use timetypes::{TimePoint, TimeSpan};
-use self::errors::ErrorKind::*;
 use self::errors::*;
-
-use std::iter::once;
-
-use itertools::Itertools;
+use self::errors::ErrorKind::*;
+use {SubtitleEntry, SubtitleFile};
 
 use combine::char::{char, string};
 use combine::combinator::{eof, parser as p, skip_many};
 use combine::primitives::Parser;
+use errors::Result as SubtitleParserResult;
+use formats::common::*;
+
+use itertools::Itertools;
+
+use std::iter::once;
+use timetypes::{TimePoint, TimeSpan};
 
 /// `.srt`-parser-specific errors
 #[allow(missing_docs)]
@@ -99,7 +99,13 @@ impl SrtFile {
         // the `once("")` is there so no last entry gets ignored
         for (line_num, line) in s.lines().chain(once("")).enumerate() {
             state = match state {
-                Emptyline => if line.trim().is_empty() { Emptyline } else { Index(Self::parse_index_line(line_num, line)?) },
+                Emptyline => {
+                    if line.trim().is_empty() {
+                        Emptyline
+                    } else {
+                        Index(Self::parse_index_line(line_num, line)?)
+                    }
+                }
                 Index(index) => Timing(index, Self::parse_timespan_line(line_num, line)?),
                 Timing(index, timespan) => Self::state_expect_dialog(line, &mut result, index, timespan, Vec::new()),
                 Dialog(index, timespan, texts) => Self::state_expect_dialog(line, &mut result, index, timespan, texts),
@@ -112,10 +118,10 @@ impl SrtFile {
     fn state_expect_dialog(line: &str, result: &mut Vec<SrtLine>, index: i64, timespan: TimeSpan, mut texts: Vec<String>) -> SrtParserState {
         if line.trim().is_empty() {
             result.push(SrtLine {
-                index: index,
-                timespan: timespan,
-                texts: texts,
-            });
+                            index: index,
+                            timespan: timespan,
+                            texts: texts,
+                        });
             SrtParserState::Emptyline
         } else {
             texts.push(line.trim().to_string());
@@ -190,7 +196,11 @@ impl SubtitleFile for SrtFile {
                     line.texts.join("\n"))
         };
 
-        Ok(self.v.iter().map(line_to_str).collect::<String>().into_bytes())
+        Ok(self.v
+               .iter()
+               .map(line_to_str)
+               .collect::<String>()
+               .into_bytes())
     }
 }
 
@@ -200,12 +210,12 @@ impl SrtFile {
         let file_parts = v.into_iter()
                           .enumerate()
                           .map(|(i, (ts, text))| {
-            SrtLine {
-                index: i as i64 + 1,
-                timespan: ts,
-                texts: text.lines().map(str::to_string).collect(),
-            }
-        })
+                                   SrtLine {
+                                       index: i as i64 + 1,
+                                       timespan: ts,
+                                       texts: text.lines().map(str::to_string).collect(),
+                                   }
+                               })
                           .collect();
 
         Ok(SrtFile { v: file_parts })

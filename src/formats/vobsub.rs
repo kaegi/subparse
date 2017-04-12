@@ -3,10 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+use self::errors::*;
 use {SubtitleEntry, SubtitleFile, SubtitleFormat};
 use errors::Result as SubtitleParserResult;
 use timetypes::{TimePoint, TimeSpan};
-use self::errors::*;
 
 use vobsub;
 
@@ -51,19 +51,19 @@ impl VobFile {
 
                 // only extract the timestamps, discard the big image data
                 Ok(VobSubSubtitle {
-                    timespan: TimeSpan {
-                        start: TimePoint::from_msecs((sub.start_time() * 1000.0) as i64),
-                        end: TimePoint::from_msecs((sub.end_time() * 1000.0) as i64),
-                    },
-                })
+                       timespan: TimeSpan {
+                           start: TimePoint::from_msecs((sub.start_time() * 1000.0) as i64),
+                           end: TimePoint::from_msecs((sub.end_time() * 1000.0) as i64),
+                       },
+                   })
             })
             .collect::<vobsub::Result<Vec<VobSubSubtitle>>>()
             .map_err(Error::from)?;
 
         Ok(VobFile {
-            data: b.to_vec(),
-            lines: lines,
-        })
+               data: b.to_vec(),
+               lines: lines,
+           })
     }
 }
 
@@ -72,11 +72,11 @@ impl SubtitleFile for VobFile {
         Ok(self.lines
                .iter()
                .map(|vsub| {
-                   SubtitleEntry {
-                       timespan: vsub.timespan,
-                       line: None,
-                   }
-               })
+                        SubtitleEntry {
+                            timespan: vsub.timespan,
+                            line: None,
+                        }
+                    })
                .collect())
     }
 

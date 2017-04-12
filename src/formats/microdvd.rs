@@ -2,22 +2,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use {SubtitleEntry, SubtitleFile};
-use errors::Result as SubtitleParserResult;
-use formats::common::*;
-use timetypes::{TimePoint, TimeSpan};
-use self::errors::ErrorKind::*;
 use self::errors::*;
-
-use std::collections::LinkedList;
-use std::borrow::Cow;
-use std::collections::HashSet;
-
-use itertools::Itertools;
+use self::errors::ErrorKind::*;
+use {SubtitleEntry, SubtitleFile};
 
 use combine::char::char;
 use combine::combinator::{eof, many, parser as p, satisfy, sep_by};
 use combine::primitives::Parser;
+use errors::Result as SubtitleParserResult;
+use formats::common::*;
+
+use itertools::Itertools;
+use std::borrow::Cow;
+use std::collections::HashSet;
+
+use std::collections::LinkedList;
+use timetypes::{TimePoint, TimeSpan};
 
 /// `.sub`(`MicroDVD`)-parser-specific errors
 #[allow(missing_docs)]
@@ -55,7 +55,10 @@ impl From<String> for MdvdFormatting {
 impl MdvdFormatting {
     /// Is this a single line formatting (e.g. `y:i`) or a multi-line formatting (e.g `Y:i`)?
     fn is_container_line_formatting(f: &str) -> bool {
-        f.chars().next().and_then(|c| Some(c.is_uppercase())).unwrap_or(false)
+        f.chars()
+         .next()
+         .and_then(|c| Some(c.is_uppercase()))
+         .unwrap_or(false)
     }
 
     /// Applies `to_lowercase()` to first char, leaves the rest of the characters untouched.
@@ -157,9 +160,9 @@ impl MdvdFile {
         }
 
         Ok(MdvdFile {
-            fps: fps,
-            v: result,
-        })
+               fps: fps,
+               v: result,
+           })
     }
 
     // Parses something like "{0}{25}{C:$0000ff}{y:b,u}{f:DeJaVuSans}{s:12}Hello!|{s:15}Hello2!"
@@ -197,9 +200,10 @@ impl MdvdFile {
         let mut cline_fmts: Vec<MdvdFormatting> = Vec::new();
 
         // convert the formatting strings to `MdvdFormatting` objects and split between multi-line and single-line formatting
-        let fmts_and_lines = fmt_strs_and_lines.into_iter()
-                                               .map(|(fmts, text)| (Self::string_to_formatting(&mut cline_fmts, fmts), text))
-                                               .collect::<Vec<_>>();
+        let fmts_and_lines =
+            fmt_strs_and_lines.into_iter()
+                              .map(|(fmts, text)| (Self::string_to_formatting(&mut cline_fmts, fmts), text))
+                              .collect::<Vec<_>>();
 
         // now we also have all multi-line formattings in `cline_fmts`
 
@@ -210,7 +214,10 @@ impl MdvdFile {
                 start_frame: start_frame,
                 end_frame: end_frame,
                 text: text,
-                formatting: cline_fmts.clone().into_iter().chain(sline_fmts.into_iter()).collect(),
+                formatting: cline_fmts.clone()
+                                      .into_iter()
+                                      .chain(sline_fmts.into_iter())
+                                      .collect(),
             }
         })
                       .collect()
@@ -222,11 +229,14 @@ impl MdvdFile {
     fn string_to_formatting(multiline_formatting: &mut Vec<MdvdFormatting>, fmts: Vec<String>) -> Vec<MdvdFormatting> {
 
         // split multiline-formatting (e.g "Y:b") and single-line formatting (e.g "y:b")
-        let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) = fmts.into_iter()
-                                                                     .partition(|fmt_str| MdvdFormatting::is_container_line_formatting(fmt_str));
+        let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) =
+            fmts.into_iter()
+                .partition(|fmt_str| MdvdFormatting::is_container_line_formatting(fmt_str));
 
         multiline_formatting.extend(&mut cline_fmts_str.into_iter().map(MdvdFormatting::from));
-        sline_fmts_str.into_iter().map(MdvdFormatting::from).collect()
+        sline_fmts_str.into_iter()
+                      .map(MdvdFormatting::from)
+                      .collect()
     }
 }
 
@@ -262,7 +272,10 @@ impl SubtitleFile for MdvdFile {
 
         let mut result: LinkedList<Cow<'static, str>> = LinkedList::new();
 
-        for (gi, group_iter) in sorted_list.into_iter().group_by(|line| (line.start_frame, line.end_frame)).into_iter().enumerate() {
+        for (gi, group_iter) in sorted_list.into_iter()
+                                           .group_by(|line| (line.start_frame, line.end_frame))
+                                           .into_iter()
+                                           .enumerate() {
             if gi != 0 {
                 result.push_back("\n".into());
             }
@@ -286,14 +299,18 @@ impl SubtitleFile for MdvdFile {
             } else {
                 formattings.iter()
                            .fold(None, |acc, set| match acc {
-                               None => Some(set.clone()),
-                               Some(acc_set) => Some(acc_set.intersection(set).cloned().collect()),
-                           })
+                    None => Some(set.clone()),
+                    Some(acc_set) => Some(acc_set.intersection(set).cloned().collect()),
+                })
                            .unwrap()
             };
 
             let individual_formattings = formattings.into_iter()
-                                                    .map(|formatting| formatting.difference(&common_formatting).cloned().collect())
+                                                    .map(|formatting| {
+                                                             formatting.difference(&common_formatting)
+                                                                       .cloned()
+                                                                       .collect()
+                                                         })
                                                     .collect::<Vec<HashSet<MdvdFormatting>>>();
 
 
@@ -311,7 +328,10 @@ impl SubtitleFile for MdvdFile {
                 result.push_back("}".into());
             }
 
-            for (i, (individual_formatting, text)) in individual_formattings.into_iter().zip(texts.into_iter()).enumerate() {
+            for (i, (individual_formatting, text)) in
+                individual_formattings.into_iter()
+                                      .zip(texts.into_iter())
+                                      .enumerate() {
                 if i != 0 {
                     result.push_back("|".into());
                 }
@@ -329,14 +349,17 @@ impl SubtitleFile for MdvdFile {
             // ends "group-by-frametime"-loop
         }
 
-        Ok(result.into_iter().map(|cow| cow.to_string()).collect::<String>().into_bytes())
+        Ok(result.into_iter()
+                 .map(|cow| cow.to_string())
+                 .collect::<String>()
+                 .into_bytes())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use SubtitleFile;
     use super::*;
+    use SubtitleFile;
 
     /// Parse string with `MdvdFile`, and reencode it with `MdvdFile`.
     fn mdvd_reconstruct(s: &str) -> String {

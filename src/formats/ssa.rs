@@ -4,18 +4,18 @@
 
 
 
-use {SubtitleEntry, SubtitleFile};
-use errors::Result as SubtitleParserResult;
-use formats::common::*;
-use timetypes::{TimePoint, TimeSpan};
-use self::errors::ErrorKind::*;
 use self::errors::*;
-
-use std::iter::once;
+use self::errors::ErrorKind::*;
+use {SubtitleEntry, SubtitleFile};
 
 use combine::char::*;
 use combine::combinator::*;
 use combine::primitives::Parser;
+use errors::Result as SubtitleParserResult;
+use formats::common::*;
+
+use std::iter::once;
+use timetypes::{TimePoint, TimeSpan};
 
 /// `.ssa`-parser-specific errors
 #[allow(missing_docs)]
@@ -99,11 +99,11 @@ impl SsaFieldsInfo {
         }
 
         Ok(SsaFieldsInfo {
-            start_field_idx: start_field_idx.ok_or_else(|| Error::from(SsaMissingField(line_num, "Start")))?,
-            end_field_idx: end_field_idx.ok_or_else(|| Error::from(SsaMissingField(line_num, "End")))?,
-            text_field_idx: text_field_idx2,
-            num_fields: num_fields,
-        })
+               start_field_idx: start_field_idx.ok_or_else(|| Error::from(SsaMissingField(line_num, "Start")))?,
+               end_field_idx: end_field_idx.ok_or_else(|| Error::from(SsaMissingField(line_num, "End")))?,
+               text_field_idx: text_field_idx2,
+               num_fields: num_fields,
+           })
     }
 }
 
@@ -206,16 +206,16 @@ impl SsaFile {
                          count(fields_info.num_fields - 1,
                                (many(none_of(once(','))), token(','))),
                          many(try(any())))
-                .map(|(ws1, dl, ws2, v, text): (String, &str, String, Vec<(String, char)>, String)| -> Result<Vec<SsaFilePart>> {
-                    let mut result: Vec<SsaFilePart> = Vec::new();
-                    result.push(SsaFilePart::Filler(ws1));
-                    result.push(SsaFilePart::Filler(dl.to_string()));
-                    result.push(SsaFilePart::Filler(ws2.to_string()));
-                    result.append(&mut Self::parse_fields(line_num, fields_info, v)?);
-                    result.push(SsaFilePart::Text(text));
-                    Ok(result)
-                })
-                .parse(line);
+            .map(|(ws1, dl, ws2, v, text): (String, &str, String, Vec<(String, char)>, String)| -> Result<Vec<SsaFilePart>> {
+                let mut result: Vec<SsaFilePart> = Vec::new();
+                result.push(SsaFilePart::Filler(ws1));
+                result.push(SsaFilePart::Filler(dl.to_string()));
+                result.push(SsaFilePart::Filler(ws2.to_string()));
+                result.append(&mut Self::parse_fields(line_num, fields_info, v)?);
+                result.push(SsaFilePart::Text(text));
+                Ok(result)
+            })
+            .parse(line);
 
         match parts_res {
             // Ok() means that parsing succeded, but the "map" function might created an SSA error
@@ -243,7 +243,10 @@ impl SsaFile {
                 SsaFilePart::Filler(field.to_string())
             };
 
-            Ok(vec![SsaFilePart::Filler(begin), part, SsaFilePart::Filler(end), SsaFilePart::Filler(sep_char.to_string())])
+            Ok(vec![SsaFilePart::Filler(begin),
+                    part,
+                    SsaFilePart::Filler(end),
+                    SsaFilePart::Filler(sep_char.to_string())])
         };
 
         let result = v.into_iter()
@@ -266,8 +269,8 @@ impl SsaFile {
                          or(token('.'), token(':')),
                          parser(number_i64),
                          eof())
-                .map(|(h, _, mm, _, ss, _, ms, _)| TimePoint::from_components(h, mm, ss, ms * 10))
-                .parse(s);
+            .map(|(h, _, mm, _, ss, _, ms, _)| TimePoint::from_components(h, mm, ss, ms * 10))
+            .parse(s);
         match parse_res {
             Ok(res) => Ok(res.0),
             Err(e) => Err(SsaWrongTimepointFormat(line, parse_error_to_string(e)).into()),
@@ -309,11 +312,9 @@ pub struct SsaFile {
 impl SsaFile {
     fn new(v: Vec<SsaFilePart>) -> SsaFile {
         // cleans up multiple fillers after another
-        let new_file_parts = dedup_string_parts(v, |part: &mut SsaFilePart| {
-            match *part {
-                SsaFilePart::Filler(ref mut text) => Some(text),
-                _ => None,
-            }
+        let new_file_parts = dedup_string_parts(v, |part: &mut SsaFilePart| match *part {
+            SsaFilePart::Filler(ref mut text) => Some(text),
+            _ => None,
         });
 
         SsaFile { v: new_file_parts }
@@ -391,7 +392,8 @@ impl SubtitleFile for SsaFile {
         let subtitle_entries = self.get_subtitle_entries_mut();
         assert_eq!(subtitle_entries.len(), new_subtitle_entries.len()); // required by specification of this function
 
-        for ((start_ref, end_ref, text_ref), new_entry_ref) in subtitle_entries.into_iter().zip(new_subtitle_entries) {
+        for ((start_ref, end_ref, text_ref), new_entry_ref) in
+            subtitle_entries.into_iter().zip(new_subtitle_entries) {
             *start_ref = new_entry_ref.timespan.start;
             *end_ref = new_entry_ref.timespan.end;
             if let Some(ref text) = new_entry_ref.line {
@@ -423,10 +425,7 @@ impl SubtitleFile for SsaFile {
             }
         };
 
-        let result: String = self.v
-                                 .iter()
-                                 .map(fn_file_part_to_string)
-                                 .collect();
+        let result: String = self.v.iter().map(fn_file_part_to_string).collect();
 
         Ok(result.into_bytes())
     }

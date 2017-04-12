@@ -86,7 +86,10 @@ pub fn get_subtitle_format_by_ending_err(ending: &str) -> Result<SubtitleFormat>
 pub fn get_subtitle_format(ending: &str, content: &[u8]) -> Option<SubtitleFormat> {
     if ending.ends_with(".sub") {
         // test for VobSub .sub magic number
-        if content.iter().take(4).cloned().eq([0x00, 0x00, 0x01, 0xba].iter().cloned()) {
+        if content.iter()
+                  .take(4)
+                  .cloned()
+                  .eq([0x00, 0x00, 0x01, 0xba].iter().cloned()) {
             Some(SubtitleFormat::VobSubSub)
         } else {
             Some(SubtitleFormat::MicroDVD)

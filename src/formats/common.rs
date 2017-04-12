@@ -5,18 +5,21 @@
 
 
 
-use std::str::FromStr;
-use std::fmt::Display;
 
 use combine::char::*;
 use combine::combinator::*;
 use combine::primitives::{ParseError, ParseResult, Parser, Stream};
+use std::fmt::Display;
+use std::str::FromStr;
 
 type CustomCharParser<I> = Expected<Satisfy<I, fn(char) -> bool>>;
 
 /// Returns the string without BOMs. Unchanged if string does not start with one.
 pub fn split_bom(s: &str) -> (&str, &str) {
-    if s.as_bytes().iter().take(3).eq([0xEF, 0xBB, 0xBF].iter()) {
+    if s.as_bytes()
+        .iter()
+        .take(3)
+        .eq([0xEF, 0xBB, 0xBF].iter()) {
         s.split_at(3)
     } else if s.as_bytes().iter().take(2).eq([0xFE, 0xFF].iter()) {
         s.split_at(2)
@@ -60,13 +63,13 @@ pub fn number_i64<I>(input: I) -> ParseResult<i64, I>
 {
     (optional(char('-')), many1(digit()))
         .map(|(a, c): (Option<_>, String)| {
-            // we provide a string that only contains digits: this unwrap should never fail
-            let i: i64 = FromStr::from_str(&c).unwrap();
-            match a {
-                Some(_) => -i,
-                None => i,
-            }
-        })
+                 // we provide a string that only contains digits: this unwrap should never fail
+                 let i: i64 = FromStr::from_str(&c).unwrap();
+                 match a {
+                     Some(_) => -i,
+                     None => i,
+                 }
+             })
         .expected("positive or negative number")
         .parse_stream(input)
 }
@@ -77,8 +80,14 @@ pub fn parse_error_to_string<I, R, P>(p: ParseError<I>) -> String
           R: PartialEq + Clone + Display,
           P: Ord + Display
 {
-    p.to_string().trim().lines().fold("".to_string(),
-                                      |a, b| if a.is_empty() { b.to_string() } else { a + "; " + b })
+    p.to_string()
+     .trim()
+     .lines()
+     .fold("".to_string(), |a, b| if a.is_empty() {
+        b.to_string()
+    } else {
+        a + "; " + b
+    })
 }
 
 
@@ -126,7 +135,8 @@ pub fn get_lines_non_destructive(s: &str) -> Vec<SplittedLine> {
             return result;
         }
 
-        match rest.char_indices().find(|&(_, c)| c == '\r' || c == '\n') {
+        match rest.char_indices()
+                  .find(|&(_, c)| c == '\r' || c == '\n') {
             Some((idx, _)) => {
                 let (line_str, new_rest) = rest.split_at(idx);
                 rest = new_rest;
@@ -156,7 +166,10 @@ pub fn get_lines_non_destructive(s: &str) -> Vec<SplittedLine> {
 fn get_lines_non_destructive_test0() {
     let lines = ["", "aaabb", "aaabb\r\nbcccc\n\r\n ", "aaabb\r\nbcccc"];
     for &full_line in lines.into_iter() {
-        let joined: String = get_lines_non_destructive(full_line).into_iter().flat_map(|(s1, s2)| vec![s1, s2].into_iter()).collect();
+        let joined: String = get_lines_non_destructive(full_line)
+            .into_iter()
+            .flat_map(|(s1, s2)| vec![s1, s2].into_iter())
+            .collect();
         assert_eq!(full_line, joined);
     }
 }
@@ -172,5 +185,9 @@ pub fn trim_non_destructive(s: &str) -> (String, String, String) {
 
 /// Splits a string in whitespace string and the rest "   hello " -> ("   ", "hello ").
 fn trim_left(s: &str) -> (String, String) {
-    (many(ws()), many(try(any())), eof()).map(|t| (t.0, t.1)).parse(s).expect("the trim parser should accept any input").0
+    (many(ws()), many(try(any())), eof())
+        .map(|t| (t.0, t.1))
+        .parse(s)
+        .expect("the trim parser should accept any input")
+        .0
 }

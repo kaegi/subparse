@@ -5,18 +5,18 @@
 
 
 
-use {SubtitleEntry, SubtitleFile};
-use errors::Result as SubtitleParserResult; // the crate wide error type (we use a custom error type here)
-use super::common::*;
-use timetypes::{TimeDelta, TimePoint, TimeSpan};
-use self::errors::ErrorKind::*;
 use self::errors::*;
-
-use std::iter::once;
+use self::errors::ErrorKind::*; // the crate wide error type (we use a custom error type here)
+use super::common::*;
+use {SubtitleEntry, SubtitleFile};
 
 use combine::char::*;
 use combine::combinator::*;
 use combine::primitives::Parser;
+use errors::Result as SubtitleParserResult;
+
+use std::iter::once;
+use timetypes::{TimeDelta, TimePoint, TimeSpan};
 
 /// `.idx`-parser-specific errors
 #[allow(missing_docs)]
@@ -59,11 +59,9 @@ pub struct IdxFile {
 impl IdxFile {
     fn new(v: Vec<IdxFilePart>) -> IdxFile {
         // cleans up multiple fillers after another
-        let new_file_parts = dedup_string_parts(v, |part: &mut IdxFilePart| {
-            match *part {
-                IdxFilePart::Filler(ref mut text) => Some(text),
-                _ => None,
-            }
+        let new_file_parts = dedup_string_parts(v, |part: &mut IdxFilePart| match *part {
+            IdxFilePart::Filler(ref mut text) => Some(text),
+            _ => None,
         });
         IdxFile { v: new_file_parts }
     }
@@ -74,28 +72,31 @@ impl SubtitleFile for IdxFile {
         let timings: Vec<_> = self.v
                                   .iter()
                                   .filter_map(|file_part| match *file_part {
-                                      IdxFilePart::Filler(_) => None,
-                                      IdxFilePart::Timestamp(t) => Some(t),
-                                  })
+                                                  IdxFilePart::Filler(_) => None,
+                                                  IdxFilePart::Timestamp(t) => Some(t),
+                                              })
                                   .collect();
 
         Ok(match timings.last() {
-            Some(&last_timing) => {
-                // .idx files do not store timespans. Every subtitle is shown until the next subtitle
-                // starts. Mpv shows the last subtile for exactly one minute.
-                let next_timings = timings.iter().cloned().skip(1).chain(once(last_timing + TimeDelta::from_mins(1)));
-                timings.iter()
-                       .cloned()
-                       .zip(next_timings)
-                       .map(|time_tuple| TimeSpan::new(time_tuple.0, time_tuple.1))
-                       .map(SubtitleEntry::from)
-                       .collect()
-            }
-            None => {
-                // no timings
-                Vec::new()
-            }
-        })
+               Some(&last_timing) => {
+            // .idx files do not store timespans. Every subtitle is shown until the next subtitle
+            // starts. Mpv shows the last subtile for exactly one minute.
+            let next_timings = timings.iter()
+                                      .cloned()
+                                      .skip(1)
+                                      .chain(once(last_timing + TimeDelta::from_mins(1)));
+            timings.iter()
+                   .cloned()
+                   .zip(next_timings)
+                   .map(|time_tuple| TimeSpan::new(time_tuple.0, time_tuple.1))
+                   .map(SubtitleEntry::from)
+                   .collect()
+        }
+               None => {
+            // no timings
+            Vec::new()
+        }
+           })
     }
 
     fn update_subtitle_entries(&mut self, ts: &[SubtitleEntry]) -> SubtitleParserResult<()> {
@@ -134,10 +135,7 @@ impl SubtitleFile for IdxFile {
             }
         };
 
-        let result: String = self.v
-                                 .iter()
-                                 .map(fn_file_part_to_string)
-                                 .collect();
+        let result: String = self.v.iter().map(fn_file_part_to_string).collect();
 
         Ok(result.into_bytes())
     }
