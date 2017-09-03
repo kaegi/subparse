@@ -146,7 +146,7 @@ pub fn parse_str(format: SubtitleFormat, content: &str, fps: f64) -> Result<Box<
 
 /// Helper function for text subtitles for byte-to-text decoding.
 fn decode_bytes_to_string(content: &[u8], encoding: EncodingRef) -> Result<String> {
-    encoding.decode(content, DecoderTrap::Strict).map_err(|e| e.to_string().into())
+    encoding.decode(content, DecoderTrap::Strict).map_err(|e| Error::from(e.to_string())).chain_err(|| Error::from(ErrorKind::DecodingError))
 }
 
 /// Parse all subtitle formats, invoking the right parser given by `format`.

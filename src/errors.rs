@@ -49,6 +49,11 @@ error_chain! {
             description("unknown file format, only SubRip (.srt), SubStationAlpha (.ssa/.ass) and VobSub (.idx and .sub) are supported at the moment")
         }
 
+        /// The file format is not supported by this library.
+        DecodingError {
+            description("error while decoding subtitle from bytes to string (wrong charset encoding?)")
+        }
+
         /// The attempted operation does not work on binary subtitle formats.
         TextFormatOnly {
             description("operation does not work on binary subtitle formats (only text formats)")
