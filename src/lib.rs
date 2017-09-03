@@ -22,6 +22,7 @@ extern crate error_chain;
 extern crate combine;
 extern crate vobsub;
 extern crate itertools;
+extern crate encoding;
 
 mod formats;
 
