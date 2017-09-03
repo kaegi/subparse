@@ -109,14 +109,21 @@ pub fn get_subtitle_format_err(ending: &str, content: &[u8]) -> Result<SubtitleF
 }
 
 // This trick works around the limitation, that trait objects can not require Sized (or Clone).
-pub trait ClonableSubtitleFile: SubtitleFile {
-    fn clone(&self) -> Box<ClonableSubtitleFile>;
+pub trait ClonableSubtitleFile: SubtitleFile + Send + Sync {
+    fn clone_box(&self) -> Box<ClonableSubtitleFile>;
 }
 impl<T> ClonableSubtitleFile for T
-    where T: SubtitleFile + Clone + 'static
+    where T: SubtitleFile + Clone + Send + Sync + 'static
 {
-    fn clone(&self) -> Box<ClonableSubtitleFile> {
+    fn clone_box(&self) -> Box<ClonableSubtitleFile> {
         Box::new(Clone::clone(self))
+    }
+}
+
+// We can now implement Clone manually by forwarding to clone_box.
+impl Clone for Box<ClonableSubtitleFile> {
+    fn clone(&self) -> Box<ClonableSubtitleFile> {
+        self.clone_box()
     }
 }
 
