@@ -11,7 +11,7 @@ license = "MPL-2.0"
 
 
 [dependencies]
-error-chain = "~0.10.0"
-combine = "~2.3.1"
+error-chain = "0.10.0"
+combine = "2.5.1"
 vobsub = "0.2.0"
-itertools = "0.5.9"
+itertools = "0.6.2"
