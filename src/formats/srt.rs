@@ -118,10 +118,10 @@ impl SrtFile {
     fn state_expect_dialog(line: &str, result: &mut Vec<SrtLine>, index: i64, timespan: TimeSpan, mut texts: Vec<String>) -> SrtParserState {
         if line.trim().is_empty() {
             result.push(SrtLine {
-                            index: index,
-                            timespan: timespan,
-                            texts: texts,
-                        });
+                index: index,
+                timespan: timespan,
+                texts: texts,
+            });
             SrtParserState::Emptyline
         } else {
             texts.push(line.trim().to_string());
@@ -142,17 +142,34 @@ impl SrtFile {
 
         /// Matches a `SubRip` timestamp like "00:24:45,670"
         let timestamp = |s| {
-            (p(number_i64), char(':'), p(number_i64), char(':'), p(number_i64), char(','), p(number_i64))
-                .map(|t| TimePoint::from_components(t.0, t.2, t.4, t.6))
-                .parse_stream(s)
+            (
+                p(number_i64),
+                char(':'),
+                p(number_i64),
+                char(':'),
+                p(number_i64),
+                char(','),
+                p(number_i64),
+            )
+            .map(|t| TimePoint::from_components(t.0, t.2, t.4, t.6))
+            .parse_stream(s)
         };
 
-        (skip_many(ws()), p(&timestamp), skip_many(ws()), string("-->"), skip_many(ws()), p(&timestamp), skip_many(ws()), eof())
-            .map(|t| TimeSpan::new(t.1, t.5))
-            .parse(line)
-            .map(|x| x.0)
-            .map_err(|_| Error::from(ExpectedTimestampLine(line.to_string())))
-            .chain_err(|| ErrorAtLine(line_num))
+        (
+            skip_many(ws()),
+            p(&timestamp),
+            skip_many(ws()),
+            string("-->"),
+            skip_many(ws()),
+            p(&timestamp),
+            skip_many(ws()),
+            eof(),
+        )
+        .map(|t| TimeSpan::new(t.1, t.5))
+        .parse(line)
+        .map(|x| x.0)
+        .map_err(|_| Error::from(ExpectedTimestampLine(line.to_string())))
+        .chain_err(|| ErrorAtLine(line_num))
     }
 }
 
@@ -160,7 +177,9 @@ impl SubtitleFile for SrtFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
         let timings = self.v
                           .iter()
-                          .map(|line| SubtitleEntry::new(line.timespan, line.texts.iter().join("\n")))
+                          .map(|line| {
+            SubtitleEntry::new(line.timespan, line.texts.iter().join("\n"))
+        })
                           .collect();
 
         Ok(timings)
@@ -182,25 +201,31 @@ impl SubtitleFile for SrtFile {
     fn to_data(&self) -> SubtitleParserResult<Vec<u8>> {
         let timepoint_to_str = |t: TimePoint| -> String {
 
-            format!("{:02}:{:02}:{:02},{:03}",
-                    t.hours(),
-                    t.mins_comp(),
-                    t.secs_comp(),
-                    t.msecs_comp())
+            format!(
+                "{:02}:{:02}:{:02},{:03}",
+                t.hours(),
+                t.mins_comp(),
+                t.secs_comp(),
+                t.msecs_comp()
+            )
         };
         let line_to_str = |line: &SrtLine| -> String {
-            format!("{}\n{} --> {}\n{}\n\n",
-                    line.index,
-                    timepoint_to_str(line.timespan.start),
-                    timepoint_to_str(line.timespan.end),
-                    line.texts.join("\n"))
+            format!(
+                "{}\n{} --> {}\n{}\n\n",
+                line.index,
+                timepoint_to_str(line.timespan.start),
+                timepoint_to_str(line.timespan.end),
+                line.texts.join("\n")
+            )
         };
 
-        Ok(self.v
-               .iter()
-               .map(line_to_str)
-               .collect::<String>()
-               .into_bytes())
+        Ok(
+            self.v
+                .iter()
+                .map(line_to_str)
+                .collect::<String>()
+                .into_bytes(),
+        )
     }
 }
 
@@ -210,12 +235,12 @@ impl SrtFile {
         let file_parts = v.into_iter()
                           .enumerate()
                           .map(|(i, (ts, text))| {
-                                   SrtLine {
-                                       index: i as i64 + 1,
-                                       timespan: ts,
-                                       texts: text.lines().map(str::to_string).collect(),
-                                   }
-                               })
+            SrtLine {
+                index: i as i64 + 1,
+                timespan: ts,
+                texts: text.lines().map(str::to_string).collect(),
+            }
+        })
                           .collect();
 
         Ok(SrtFile { v: file_parts })
@@ -229,8 +254,16 @@ mod tests {
         use timetypes::{TimePoint, TimeSpan};
         use SubtitleFile;
 
-        let lines = vec![(TimeSpan::new(TimePoint::from_msecs(1500), TimePoint::from_msecs(3700)), "line1".to_string()),
-                         (TimeSpan::new(TimePoint::from_msecs(4500), TimePoint::from_msecs(8700)), "line2".to_string())];
+        let lines = vec![
+            (
+                TimeSpan::new(TimePoint::from_msecs(1500), TimePoint::from_msecs(3700)),
+                "line1".to_string()
+            ),
+            (
+                TimeSpan::new(TimePoint::from_msecs(4500), TimePoint::from_msecs(8700)),
+                "line2".to_string()
+            ),
+        ];
         let file = super::SrtFile::create(lines).unwrap();
 
         // generate file

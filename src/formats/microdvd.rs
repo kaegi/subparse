@@ -126,8 +126,10 @@ struct MdvdLine {
 impl MdvdLine {
     fn to_subtitle_entry(&self, fps: f64) -> SubtitleEntry {
         SubtitleEntry {
-            timespan: TimeSpan::new(TimePoint::from_msecs((self.start_frame as f64 * 1000.0 / fps) as i64),
-                                    TimePoint::from_msecs((self.end_frame as f64 * 1000.0 / fps) as i64)),
+            timespan: TimeSpan::new(
+                TimePoint::from_msecs((self.start_frame as f64 * 1000.0 / fps) as i64),
+                TimePoint::from_msecs((self.end_frame as f64 * 1000.0 / fps) as i64),
+            ),
             line: Some(self.text.clone()),
         }
     }
@@ -160,9 +162,9 @@ impl MdvdFile {
         }
 
         Ok(MdvdFile {
-               fps: fps,
-               v: result,
-           })
+            fps: fps,
+            v: result,
+        })
     }
 
     // Parses something like "{0}{25}{C:$0000ff}{y:b,u}{f:DeJaVuSans}{s:12}Hello!|{s:15}Hello2!"
@@ -200,10 +202,11 @@ impl MdvdFile {
         let mut cline_fmts: Vec<MdvdFormatting> = Vec::new();
 
         // convert the formatting strings to `MdvdFormatting` objects and split between multi-line and single-line formatting
-        let fmts_and_lines =
-            fmt_strs_and_lines.into_iter()
-                              .map(|(fmts, text)| (Self::string_to_formatting(&mut cline_fmts, fmts), text))
-                              .collect::<Vec<_>>();
+        let fmts_and_lines = fmt_strs_and_lines.into_iter()
+                                               .map(|(fmts, text)| {
+            (Self::string_to_formatting(&mut cline_fmts, fmts), text)
+        })
+                                               .collect::<Vec<_>>();
 
         // now we also have all multi-line formattings in `cline_fmts`
 
@@ -229,9 +232,9 @@ impl MdvdFile {
     fn string_to_formatting(multiline_formatting: &mut Vec<MdvdFormatting>, fmts: Vec<String>) -> Vec<MdvdFormatting> {
 
         // split multiline-formatting (e.g "Y:b") and single-line formatting (e.g "y:b")
-        let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) =
-            fmts.into_iter()
-                .partition(|fmt_str| MdvdFormatting::is_container_line_formatting(fmt_str));
+        let (cline_fmts_str, sline_fmts_str): (Vec<_>, Vec<_>) = fmts.into_iter().partition(|fmt_str| {
+            MdvdFormatting::is_container_line_formatting(fmt_str)
+        });
 
         multiline_formatting.extend(&mut cline_fmts_str.into_iter().map(MdvdFormatting::from));
         sline_fmts_str.into_iter()
@@ -242,10 +245,12 @@ impl MdvdFile {
 
 impl SubtitleFile for MdvdFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
-        Ok(self.v
-               .iter()
-               .map(|line| line.to_subtitle_entry(self.fps))
-               .collect())
+        Ok(
+            self.v
+                .iter()
+                .map(|line| line.to_subtitle_entry(self.fps))
+                .collect(),
+        )
     }
 
     fn update_subtitle_entries(&mut self, new_subtitle_entries: &[SubtitleEntry]) -> SubtitleParserResult<()> {
@@ -275,7 +280,8 @@ impl SubtitleFile for MdvdFile {
         for (gi, group_iter) in sorted_list.into_iter()
                                            .group_by(|line| (line.start_frame, line.end_frame))
                                            .into_iter()
-                                           .enumerate() {
+                                           .enumerate()
+        {
             if gi != 0 {
                 result.push_back("\n".into());
             }
@@ -307,10 +313,8 @@ impl SubtitleFile for MdvdFile {
 
             let individual_formattings = formattings.into_iter()
                                                     .map(|formatting| {
-                                                             formatting.difference(&common_formatting)
-                                                                       .cloned()
-                                                                       .collect()
-                                                         })
+                formatting.difference(&common_formatting).cloned().collect()
+            })
                                                     .collect::<Vec<HashSet<MdvdFormatting>>>();
 
 
@@ -331,7 +335,8 @@ impl SubtitleFile for MdvdFile {
             for (i, (individual_formatting, text)) in
                 individual_formattings.into_iter()
                                       .zip(texts.into_iter())
-                                      .enumerate() {
+                                      .enumerate()
+            {
                 if i != 0 {
                     result.push_back("|".into());
                 }
@@ -349,10 +354,12 @@ impl SubtitleFile for MdvdFile {
             // ends "group-by-frametime"-loop
         }
 
-        Ok(result.into_iter()
-                 .map(|cow| cow.to_string())
-                 .collect::<String>()
-                 .into_bytes())
+        Ok(
+            result.into_iter()
+                  .map(|cow| cow.to_string())
+                  .collect::<String>()
+                  .into_bytes(),
+        )
     }
 }
 
@@ -387,15 +394,23 @@ mod tests {
 
         // cleanup formattings in a file
         test_mdvd("{0}{25}{y:i}Text1|{y:i}Text2", "{0}{25}{Y:i}Text1|Text2");
-        test_mdvd("{0}{25}{y:i}Text1\n{0}{25}{y:i}Text2",
-                  "{0}{25}{Y:i}Text1|Text2");
-        test_mdvd("{0}{25}{y:i}{y:b}Text1\n{0}{25}{y:i}Text2",
-                  "{0}{25}{Y:i}{y:b}Text1|Text2");
-        test_mdvd("{0}{25}{y:i}{y:b}Text1\n{0}{25}{y:i}Text2",
-                  "{0}{25}{Y:i}{y:b}Text1|Text2");
+        test_mdvd(
+            "{0}{25}{y:i}Text1\n{0}{25}{y:i}Text2",
+            "{0}{25}{Y:i}Text1|Text2",
+        );
+        test_mdvd(
+            "{0}{25}{y:i}{y:b}Text1\n{0}{25}{y:i}Text2",
+            "{0}{25}{Y:i}{y:b}Text1|Text2",
+        );
+        test_mdvd(
+            "{0}{25}{y:i}{y:b}Text1\n{0}{25}{y:i}Text2",
+            "{0}{25}{Y:i}{y:b}Text1|Text2",
+        );
 
         // these can't be condensed, because the lines have different times
-        test_mdvd("{0}{25}{y:i}Text1\n{0}{26}{y:i}Text2",
-                  "{0}{25}{y:i}Text1\n{0}{26}{y:i}Text2");
+        test_mdvd(
+            "{0}{25}{y:i}Text1\n{0}{26}{y:i}Text2",
+            "{0}{25}{y:i}Text1\n{0}{26}{y:i}Text2",
+        );
     }
 }

@@ -72,31 +72,31 @@ impl SubtitleFile for IdxFile {
         let timings: Vec<_> = self.v
                                   .iter()
                                   .filter_map(|file_part| match *file_part {
-                                                  IdxFilePart::Filler(_) => None,
-                                                  IdxFilePart::Timestamp(t) => Some(t),
-                                              })
+            IdxFilePart::Filler(_) => None,
+            IdxFilePart::Timestamp(t) => Some(t),
+        })
                                   .collect();
 
         Ok(match timings.last() {
-               Some(&last_timing) => {
-            // .idx files do not store timespans. Every subtitle is shown until the next subtitle
-            // starts. Mpv shows the last subtile for exactly one minute.
-            let next_timings = timings.iter()
-                                      .cloned()
-                                      .skip(1)
-                                      .chain(once(last_timing + TimeDelta::from_mins(1)));
-            timings.iter()
-                   .cloned()
-                   .zip(next_timings)
-                   .map(|time_tuple| TimeSpan::new(time_tuple.0, time_tuple.1))
-                   .map(SubtitleEntry::from)
-                   .collect()
-        }
-               None => {
-            // no timings
-            Vec::new()
-        }
-           })
+            Some(&last_timing) => {
+                // .idx files do not store timespans. Every subtitle is shown until the next subtitle
+                // starts. Mpv shows the last subtile for exactly one minute.
+                let next_timings = timings.iter().cloned().skip(1).chain(once(
+                    last_timing +
+                        TimeDelta::from_mins(1),
+                ));
+                timings.iter()
+                       .cloned()
+                       .zip(next_timings)
+                       .map(|time_tuple| TimeSpan::new(time_tuple.0, time_tuple.1))
+                       .map(SubtitleEntry::from)
+                       .collect()
+            }
+            None => {
+                // no timings
+                Vec::new()
+            }
+        })
     }
 
     fn update_subtitle_entries(&mut self, ts: &[SubtitleEntry]) -> SubtitleParserResult<()> {
@@ -119,12 +119,14 @@ impl SubtitleFile for IdxFile {
         // timing to string like "00:03:28:308"
         let fn_timing_to_string = |t: TimePoint| {
             let p = if t.msecs() < 0 { -t } else { t };
-            format!("{}{:02}:{:02}:{:02}:{:03}",
-                    if t.msecs() < 0 { "-" } else { "" },
-                    p.hours(),
-                    p.mins_comp(),
-                    p.secs_comp(),
-                    p.msecs_comp())
+            format!(
+                "{}{:02}:{:02}:{:02}:{:03}",
+                if t.msecs() < 0 { "-" } else { "" },
+                p.hours(),
+                p.mins_comp(),
+                p.secs_comp(),
+                p.msecs_comp()
+            )
         };
 
         let fn_file_part_to_string = |part: &IdxFilePart| {
@@ -177,19 +179,34 @@ impl IdxFile {
             return Ok(vec![IdxFilePart::Filler(s)]);
         }
 
-        (many(ws()), string("timestamp:"), many(ws()), many(or(digit(), token(':'))), many(try(any())), eof())
-            .map(|(ws1, s1, ws2, timestamp_str, s2, _): (String, &str, String, String, String, ())| -> Result<Vec<IdxFilePart>> {
-                let mut result = Vec::<IdxFilePart>::new();
-                result.push(IdxFilePart::Filler(ws1));
-                result.push(IdxFilePart::Filler(s1.to_string()));
-                result.push(IdxFilePart::Filler(ws2));
-                result.push(IdxFilePart::Timestamp(Self::parse_timestamp(line_num, timestamp_str.as_str())?));
-                result.push(IdxFilePart::Filler(s2.to_string()));
-                Ok(result)
-            })
-            .parse(s.as_str())
-            .map_err(|e| IdxLineParseError(line_num, parse_error_to_string(e)))?
-            .0
+        (
+            many(ws()),
+            string("timestamp:"),
+            many(ws()),
+            many(or(digit(), token(':'))),
+            many(try(any())),
+            eof(),
+        )
+        .map(|(ws1, s1, ws2, timestamp_str, s2, _): (String,
+                                                &str,
+                                                String,
+                                                String,
+                                                String,
+                                                ())|
+         -> Result<Vec<IdxFilePart>> {
+            let mut result = Vec::<IdxFilePart>::new();
+            result.push(IdxFilePart::Filler(ws1));
+            result.push(IdxFilePart::Filler(s1.to_string()));
+            result.push(IdxFilePart::Filler(ws2));
+            result.push(IdxFilePart::Timestamp(
+                Self::parse_timestamp(line_num, timestamp_str.as_str())?,
+            ));
+            result.push(IdxFilePart::Filler(s2.to_string()));
+            Ok(result)
+        })
+        .parse(s.as_str())
+        .map_err(|e| IdxLineParseError(line_num, parse_error_to_string(e)))?
+        .0
     }
 
     /// Parse an .idx timestamp like `00:41:36:961`.

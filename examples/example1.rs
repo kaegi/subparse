@@ -21,8 +21,9 @@ fn main() {
     // parse the file
     let format = get_subtitle_format(path, file_content.as_bytes()).expect("unknown format");
     let mut subtitle_file = parse_str(format, &file_content, 25.0).expect("parser error");
-    let mut subtitle_entries: Vec<SubtitleEntry> = subtitle_file.get_subtitle_entries()
-                                                                .expect("unexpected error");
+    let mut subtitle_entries: Vec<SubtitleEntry> = subtitle_file.get_subtitle_entries().expect(
+        "unexpected error",
+    );
 
     // shift all subtitle entries by 1 minute and append "subparse" to each subtitle line
     for subtitle_entry in &mut subtitle_entries {

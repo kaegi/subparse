@@ -51,37 +51,41 @@ impl VobFile {
 
                 // only extract the timestamps, discard the big image data
                 Ok(VobSubSubtitle {
-                       timespan: TimeSpan {
-                           start: TimePoint::from_msecs((sub.start_time() * 1000.0) as i64),
-                           end: TimePoint::from_msecs((sub.end_time() * 1000.0) as i64),
-                       },
-                   })
+                    timespan: TimeSpan {
+                        start: TimePoint::from_msecs((sub.start_time() * 1000.0) as i64),
+                        end: TimePoint::from_msecs((sub.end_time() * 1000.0) as i64),
+                    },
+                })
             })
             .collect::<vobsub::Result<Vec<VobSubSubtitle>>>()
             .map_err(Error::from)?;
 
         Ok(VobFile {
-               data: b.to_vec(),
-               lines: lines,
-           })
+            data: b.to_vec(),
+            lines: lines,
+        })
     }
 }
 
 impl SubtitleFile for VobFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
-        Ok(self.lines
-               .iter()
-               .map(|vsub| {
-                        SubtitleEntry {
-                            timespan: vsub.timespan,
-                            line: None,
-                        }
-                    })
-               .collect())
+        Ok(
+            self.lines
+                .iter()
+                .map(|vsub| {
+                SubtitleEntry {
+                    timespan: vsub.timespan,
+                    line: None,
+                }
+            })
+                .collect(),
+        )
     }
 
     fn update_subtitle_entries(&mut self, _: &[SubtitleEntry]) -> SubtitleParserResult<()> {
-        Err(::errors::ErrorKind::UpdatingEntriesNotSupported(SubtitleFormat::VobSubSub).into())
+        Err(
+            ::errors::ErrorKind::UpdatingEntriesNotSupported(SubtitleFormat::VobSubSub).into(),
+        )
     }
 
     fn to_data(&self) -> SubtitleParserResult<Vec<u8>> {

@@ -92,13 +92,15 @@ impl Debug for Timing {
 impl Display for Timing {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         let t = if self.0 < 0 { -*self } else { *self };
-        write!(f,
-               "{}{}:{:02}:{:02}.{:03}",
-               if self.0 < 0 { "-" } else { "" },
-               t.hours(),
-               t.mins_comp(),
-               t.secs_comp(),
-               t.msecs_comp())
+        write!(
+            f,
+            "{}{}:{:02}:{:02}.{:03}",
+            if self.0 < 0 { "-" } else { "" },
+            t.hours(),
+            t.mins_comp(),
+            t.secs_comp(),
+            t.msecs_comp()
+        )
     }
 }
 

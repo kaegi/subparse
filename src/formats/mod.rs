@@ -11,8 +11,8 @@ pub mod vobsub;
 pub mod common;
 
 use SubtitleFile;
-use errors::*;
 use encoding::{EncodingRef, DecoderTrap};
+use errors::*;
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -87,10 +87,12 @@ pub fn get_subtitle_format_by_ending_err(ending: &str) -> Result<SubtitleFormat>
 pub fn get_subtitle_format(ending: &str, content: &[u8]) -> Option<SubtitleFormat> {
     if ending.ends_with(".sub") {
         // test for VobSub .sub magic number
-        if content.iter()
-                  .take(4)
-                  .cloned()
-                  .eq([0x00, 0x00, 0x01, 0xba].iter().cloned()) {
+        if content.iter().take(4).cloned().eq(
+            [0x00, 0x00, 0x01, 0xba]
+                .iter()
+                .cloned(),
+        )
+        {
             Some(SubtitleFormat::VobSubSub)
         } else {
             Some(SubtitleFormat::MicroDVD)
@@ -113,7 +115,8 @@ pub trait ClonableSubtitleFile: SubtitleFile + Send + Sync {
     fn clone_box(&self) -> Box<ClonableSubtitleFile>;
 }
 impl<T> ClonableSubtitleFile for T
-    where T: SubtitleFile + Clone + Send + Sync + 'static
+where
+    T: SubtitleFile + Clone + Send + Sync + 'static,
 {
     fn clone_box(&self) -> Box<ClonableSubtitleFile> {
         Box::new(Clone::clone(self))
@@ -146,7 +149,9 @@ pub fn parse_str(format: SubtitleFormat, content: &str, fps: f64) -> Result<Box<
 
 /// Helper function for text subtitles for byte-to-text decoding.
 fn decode_bytes_to_string(content: &[u8], encoding: EncodingRef) -> Result<String> {
-    encoding.decode(content, DecoderTrap::Strict).map_err(|e| Error::from(e.to_string())).chain_err(|| Error::from(ErrorKind::DecodingError))
+    encoding.decode(content, DecoderTrap::Strict)
+            .map_err(|e| Error::from(e.to_string()))
+            .chain_err(|| Error::from(ErrorKind::DecodingError))
 }
 
 /// Parse all subtitle formats, invoking the right parser given by `format`.
@@ -165,10 +170,19 @@ fn decode_bytes_to_string(content: &[u8], encoding: EncodingRef) -> Result<Strin
 /// frame numbers are converted into timestamps.
 pub fn parse_bytes(format: SubtitleFormat, content: &[u8], encoding: EncodingRef, fps: f64) -> Result<Box<ClonableSubtitleFile>> {
     match format {
-        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
-        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
-        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
+        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(
+            &decode_bytes_to_string(content, encoding)?,
+        )?)),
+        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(
+            &decode_bytes_to_string(content, encoding)?,
+        )?)),
+        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(
+            &decode_bytes_to_string(content, encoding)?,
+        )?)),
         SubtitleFormat::VobSubSub => Ok(Box::new(vobsub::VobFile::parse(content)?)),
-        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(&decode_bytes_to_string(content, encoding)?, fps)?)),
+        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(
+            &decode_bytes_to_string(content, encoding)?,
+            fps,
+        )?)),
     }
 }

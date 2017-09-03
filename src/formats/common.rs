@@ -16,10 +16,7 @@ type CustomCharParser<I> = Expected<Satisfy<I, fn(char) -> bool>>;
 
 /// Returns the string without BOMs. Unchanged if string does not start with one.
 pub fn split_bom(s: &str) -> (&str, &str) {
-    if s.as_bytes()
-        .iter()
-        .take(3)
-        .eq([0xEF, 0xBB, 0xBF].iter()) {
+    if s.as_bytes().iter().take(3).eq([0xEF, 0xBB, 0xBF].iter()) {
         s.split_at(3)
     } else if s.as_bytes().iter().take(2).eq([0xFE, 0xFF].iter()) {
         s.split_at(2)
@@ -37,10 +34,18 @@ fn test_split_bom() {
     let bom2 = unsafe { ::std::str::from_utf8_unchecked(bom2_vec) };
 
     // Rust doesn't seem to let us create a BOM as str in a safe way.
-    assert_eq!(split_bom(unsafe { ::std::str::from_utf8_unchecked(&[0xEF, 0xBB, 0xBF, 'a' as u8, 'b' as u8, 'c' as u8]) }),
-               (bom1, "abc"));
-    assert_eq!(split_bom(unsafe { ::std::str::from_utf8_unchecked(&[0xFE, 0xFF, 'd' as u8, 'e' as u8, 'g' as u8]) }),
-               (bom2, "deg"));
+    assert_eq!(
+        split_bom(unsafe {
+            ::std::str::from_utf8_unchecked(&[0xEF, 0xBB, 0xBF, 'a' as u8, 'b' as u8, 'c' as u8])
+        }),
+        (bom1, "abc")
+    );
+    assert_eq!(
+        split_bom(unsafe {
+            ::std::str::from_utf8_unchecked(&[0xFE, 0xFF, 'd' as u8, 'e' as u8, 'g' as u8])
+        }),
+        (bom2, "deg")
+    );
     assert_eq!(split_bom("bla"), ("", "bla"));
     assert_eq!(split_bom(""), ("", ""));
 }
@@ -49,7 +54,8 @@ fn test_split_bom() {
 #[inline]
 #[allow(trivial_casts)]
 pub fn ws<I>() -> CustomCharParser<I>
-    where I: Stream<Item = char>
+where
+    I: Stream<Item = char>,
 {
     fn f(c: char) -> bool {
         c == ' ' || c == '\t'
@@ -59,34 +65,35 @@ pub fn ws<I>() -> CustomCharParser<I>
 
 /// Matches a positive or negative intger number.
 pub fn number_i64<I>(input: I) -> ParseResult<i64, I>
-    where I: Stream<Item = char>
+where
+    I: Stream<Item = char>,
 {
     (optional(char('-')), many1(digit()))
         .map(|(a, c): (Option<_>, String)| {
-                 // we provide a string that only contains digits: this unwrap should never fail
-                 let i: i64 = FromStr::from_str(&c).unwrap();
-                 match a {
-                     Some(_) => -i,
-                     None => i,
-                 }
-             })
+            // we provide a string that only contains digits: this unwrap should never fail
+            let i: i64 = FromStr::from_str(&c).unwrap();
+            match a {
+                Some(_) => -i,
+                None => i,
+            }
+        })
         .expected("positive or negative number")
         .parse_stream(input)
 }
 
 /// Create a single-line-error string from a combine parser error.
 pub fn parse_error_to_string<I, R, P>(p: ParseError<I>) -> String
-    where I: Stream<Item = char, Range = R, Position = P>,
-          R: PartialEq + Clone + Display,
-          P: Ord + Display
+where
+    I: Stream<Item = char, Range = R, Position = P>,
+    R: PartialEq + Clone + Display,
+    P: Ord + Display,
 {
-    p.to_string()
-     .trim()
-     .lines()
-     .fold("".to_string(), |a, b| if a.is_empty() {
-        b.to_string()
-    } else {
-        a + "; " + b
+    p.to_string().trim().lines().fold("".to_string(), |a, b| {
+        if a.is_empty() {
+            b.to_string()
+        } else {
+            a + "; " + b
+        }
     })
 }
 
@@ -97,7 +104,8 @@ pub fn parse_error_to_string<I, R, P>(p: ParseError<I>) -> String
 /// original file. Two consecutive filler parts (their strings) can be merged. This function abstracts over the
 /// specific file part type.
 pub fn dedup_string_parts<T, F>(v: Vec<T>, mut extract_fn: F) -> Vec<T>
-    where F: FnMut(&mut T) -> Option<&mut String>
+where
+    F: FnMut(&mut T) -> Option<&mut String>,
 {
 
     let mut result = Vec::new();
@@ -135,8 +143,7 @@ pub fn get_lines_non_destructive(s: &str) -> Vec<SplittedLine> {
             return result;
         }
 
-        match rest.char_indices()
-                  .find(|&(_, c)| c == '\r' || c == '\n') {
+        match rest.char_indices().find(|&(_, c)| c == '\r' || c == '\n') {
             Some((idx, _)) => {
                 let (line_str, new_rest) = rest.split_at(idx);
                 rest = new_rest;
@@ -180,7 +187,11 @@ fn get_lines_non_destructive_test0() {
 pub fn trim_non_destructive(s: &str) -> (String, String, String) {
     let (begin, rest) = trim_left(s);
     let (end, rest2) = trim_left(&rest.chars().rev().collect::<String>());
-    (begin, rest2.chars().rev().collect(), end.chars().rev().collect())
+    (
+        begin,
+        rest2.chars().rev().collect(),
+        end.chars().rev().collect(),
+    )
 }
 
 /// Splits a string in whitespace string and the rest "   hello " -> ("   ", "hello ").

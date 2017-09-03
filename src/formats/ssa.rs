@@ -93,17 +93,23 @@ impl SsaFieldsInfo {
             }
         }
 
-        let text_field_idx2 = text_field_idx.ok_or_else(|| Error::from(SsaMissingField(line_num, "Text")))?;
+        let text_field_idx2 = text_field_idx.ok_or_else(|| {
+            Error::from(SsaMissingField(line_num, "Text"))
+        })?;
         if text_field_idx2 != num_fields - 1 {
             return Err(SsaTextFieldNotLast(line_num))?;
         }
 
         Ok(SsaFieldsInfo {
-               start_field_idx: start_field_idx.ok_or_else(|| Error::from(SsaMissingField(line_num, "Start")))?,
-               end_field_idx: end_field_idx.ok_or_else(|| Error::from(SsaMissingField(line_num, "End")))?,
-               text_field_idx: text_field_idx2,
-               num_fields: num_fields,
-           })
+            start_field_idx: start_field_idx.ok_or_else(|| {
+                Error::from(SsaMissingField(line_num, "Start"))
+            })?,
+            end_field_idx: end_field_idx.ok_or_else(|| {
+                Error::from(SsaMissingField(line_num, "End"))
+            })?,
+            text_field_idx: text_field_idx2,
+            num_fields: num_fields,
+        })
     }
 }
 
@@ -187,7 +193,11 @@ impl SsaFile {
                 continue;
             }
 
-            result.append(&mut Self::parse_dialog_line(line_num, line.as_str(), fields_info)?);
+            result.append(&mut Self::parse_dialog_line(
+                line_num,
+                line.as_str(),
+                fields_info,
+            )?);
             result.push(SsaFilePart::Filler(newl));
         }
 
@@ -200,27 +210,38 @@ impl SsaFile {
     /// "Dialogue: 1,0:22:43.52,0:22:46.22,ED-Romaji,,0,0,0,,{\fad(150,150)\blur0.5\bord1}some text"
     /// ```
     fn parse_dialog_line(line_num: usize, line: &str, fields_info: &SsaFieldsInfo) -> Result<Vec<SsaFilePart>> {
-        let parts_res = (many(ws()),
-                         string("Dialogue:"),
-                         many(ws()),
-                         count(fields_info.num_fields - 1,
-                               (many(none_of(once(','))), token(','))),
-                         many(try(any())))
-            .map(|(ws1, dl, ws2, v, text): (String, &str, String, Vec<(String, char)>, String)| -> Result<Vec<SsaFilePart>> {
-                let mut result: Vec<SsaFilePart> = Vec::new();
-                result.push(SsaFilePart::Filler(ws1));
-                result.push(SsaFilePart::Filler(dl.to_string()));
-                result.push(SsaFilePart::Filler(ws2.to_string()));
-                result.append(&mut Self::parse_fields(line_num, fields_info, v)?);
-                result.push(SsaFilePart::Text(text));
-                Ok(result)
-            })
-            .parse(line);
+        let parts_res = (
+            many(ws()),
+            string("Dialogue:"),
+            many(ws()),
+            count(fields_info.num_fields - 1, (
+                many(none_of(once(','))),
+                token(','),
+            )),
+            many(try(any())),
+        )
+                        .map(|(ws1, dl, ws2, v, text): (String,
+                                   &str,
+                                   String,
+                                   Vec<(String, char)>,
+                                   String)|
+         -> Result<Vec<SsaFilePart>> {
+            let mut result: Vec<SsaFilePart> = Vec::new();
+            result.push(SsaFilePart::Filler(ws1));
+            result.push(SsaFilePart::Filler(dl.to_string()));
+            result.push(SsaFilePart::Filler(ws2.to_string()));
+            result.append(&mut Self::parse_fields(line_num, fields_info, v)?);
+            result.push(SsaFilePart::Text(text));
+            Ok(result)
+        })
+                        .parse(line);
 
         match parts_res {
             // Ok() means that parsing succeded, but the "map" function might created an SSA error
             Ok((parts, _)) => Ok(parts?),
-            Err(e) => Err(SsaDialogLineParseError(line_num, parse_error_to_string(e)).into()),
+            Err(e) => Err(
+                SsaDialogLineParseError(line_num, parse_error_to_string(e)).into(),
+            ),
         }
     }
 
@@ -243,10 +264,12 @@ impl SsaFile {
                 SsaFilePart::Filler(field.to_string())
             };
 
-            Ok(vec![SsaFilePart::Filler(begin),
-                    part,
-                    SsaFilePart::Filler(end),
-                    SsaFilePart::Filler(sep_char.to_string())])
+            Ok(vec![
+                SsaFilePart::Filler(begin),
+                part,
+                SsaFilePart::Filler(end),
+                SsaFilePart::Filler(sep_char.to_string()),
+            ])
         };
 
         let result = v.into_iter()
@@ -261,19 +284,25 @@ impl SsaFile {
 
     /// Something like "0:19:41.99"
     fn parse_timepoint(line: usize, s: &str) -> Result<TimePoint> {
-        let parse_res = (parser(number_i64),
-                         token(':'),
-                         parser(number_i64),
-                         token(':'),
-                         parser(number_i64),
-                         or(token('.'), token(':')),
-                         parser(number_i64),
-                         eof())
-            .map(|(h, _, mm, _, ss, _, ms, _)| TimePoint::from_components(h, mm, ss, ms * 10))
-            .parse(s);
+        let parse_res = (
+            parser(number_i64),
+            token(':'),
+            parser(number_i64),
+            token(':'),
+            parser(number_i64),
+            or(token('.'), token(':')),
+            parser(number_i64),
+            eof(),
+        )
+                        .map(|(h, _, mm, _, ss, _, ms, _)| {
+            TimePoint::from_components(h, mm, ss, ms * 10)
+        })
+                        .parse(s);
         match parse_res {
             Ok(res) => Ok(res.0),
-            Err(e) => Err(SsaWrongTimepointFormat(line, parse_error_to_string(e)).into()),
+            Err(e) => Err(
+                SsaWrongTimepointFormat(line, parse_error_to_string(e)).into(),
+            ),
         }
     }
 }
@@ -348,8 +377,12 @@ impl SsaFile {
                         let snatched_startpoint_buffer = startpoint_buffer.take();
                         let snatched_endpoint_buffer = endpoint_buffer.take();
 
-                        let start = snatched_startpoint_buffer.expect("SSA parser should have ensured that every line has a startpoint");
-                        let end = snatched_endpoint_buffer.expect("SSA parser should have ensured that every line has a endpoint");
+                        let start = snatched_startpoint_buffer.expect(
+                            "SSA parser should have ensured that every line has a startpoint",
+                        );
+                        let end = snatched_endpoint_buffer.expect(
+                            "SSA parser should have ensured that every line has a endpoint",
+                        );
 
                         Some((start, end, text))
                     }
@@ -357,10 +390,7 @@ impl SsaFile {
                 }
             };
 
-            self.v
-                .iter_mut()
-                .filter_map(filter_map_closure)
-                .collect()
+            self.v.iter_mut().filter_map(filter_map_closure).collect()
         };
 
         // every timespan should now consist of a beginning and a end (this should be ensured by parser)
@@ -382,7 +412,9 @@ impl SubtitleFile for SsaFile {
         let mut new_file = self.clone();
         let timings = new_file.get_subtitle_entries_mut()
                               .into_iter()
-                              .map(|(&mut start, &mut end, text)| SubtitleEntry::new(TimeSpan::new(start, end), text.clone()))
+                              .map(|(&mut start, &mut end, text)| {
+            SubtitleEntry::new(TimeSpan::new(start, end), text.clone())
+        })
                               .collect();
 
         Ok(timings)
@@ -392,8 +424,7 @@ impl SubtitleFile for SsaFile {
         let subtitle_entries = self.get_subtitle_entries_mut();
         assert_eq!(subtitle_entries.len(), new_subtitle_entries.len()); // required by specification of this function
 
-        for ((start_ref, end_ref, text_ref), new_entry_ref) in
-            subtitle_entries.into_iter().zip(new_subtitle_entries) {
+        for ((start_ref, end_ref, text_ref), new_entry_ref) in subtitle_entries.into_iter().zip(new_subtitle_entries) {
             *start_ref = new_entry_ref.timespan.start;
             *end_ref = new_entry_ref.timespan.end;
             if let Some(ref text) = new_entry_ref.line {
@@ -408,12 +439,14 @@ impl SubtitleFile for SsaFile {
         // timing to string like "0:00:22.21"
         let fn_timing_to_string = |t: TimePoint| {
             let p = if t.msecs() < 0 { -t } else { t };
-            format!("{}{}:{:02}:{:02}.{:02}",
-                    if t.msecs() < 0 { "-" } else { "" },
-                    p.hours(),
-                    p.mins_comp(),
-                    p.secs_comp(),
-                    p.csecs_comp())
+            format!(
+                "{}{}:{:02}:{:02}.{:02}",
+                if t.msecs() < 0 { "-" } else { "" },
+                p.hours(),
+                p.mins_comp(),
+                p.secs_comp(),
+                p.csecs_comp()
+            )
         };
 
         let fn_file_part_to_string = |part: &SsaFilePart| {
