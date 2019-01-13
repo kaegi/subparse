@@ -2,18 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
-pub mod srt;
-pub mod ssa;
+pub mod common;
 pub mod idx;
 pub mod microdvd;
+pub mod srt;
+pub mod ssa;
 pub mod vobsub;
-pub mod common;
 
-use SubtitleFile;
-use encoding::{EncodingRef, DecoderTrap};
+use encoding_rs::Encoding;
 use errors::*;
-
+use SubtitleFile;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// All formats which are supported by this library.
@@ -47,7 +45,6 @@ impl SubtitleFormat {
     }
 }
 
-
 /// Returns the subtitle format by the file ending.
 ///
 /// Calling the function with the full file path or simply a `get_subtitle_format_by_ending(".srt")`
@@ -57,7 +54,6 @@ impl SubtitleFormat {
 /// function will return `None` in that case. Instead, use the content-aware `get_subtitle_format`
 /// to handle this case correctly.
 pub fn get_subtitle_format_by_ending(ending: &str) -> Option<SubtitleFormat> {
-
     if ending.ends_with(".srt") {
         Some(SubtitleFormat::SubRip)
     } else if ending.ends_with(".ssa") || ending.ends_with(".ass") {
@@ -87,12 +83,7 @@ pub fn get_subtitle_format_by_ending_err(ending: &str) -> Result<SubtitleFormat>
 pub fn get_subtitle_format(ending: &str, content: &[u8]) -> Option<SubtitleFormat> {
     if ending.ends_with(".sub") {
         // test for VobSub .sub magic number
-        if content.iter().take(4).cloned().eq(
-            [0x00, 0x00, 0x01, 0xba]
-                .iter()
-                .cloned(),
-        )
-        {
+        if content.iter().take(4).cloned().eq([0x00, 0x00, 0x01, 0xba].iter().cloned()) {
             Some(SubtitleFormat::VobSubSub)
         } else {
             Some(SubtitleFormat::MicroDVD)
@@ -148,10 +139,13 @@ pub fn parse_str(format: SubtitleFormat, content: &str, fps: f64) -> Result<Box<
 }
 
 /// Helper function for text subtitles for byte-to-text decoding.
-fn decode_bytes_to_string(content: &[u8], encoding: EncodingRef) -> Result<String> {
-    encoding.decode(content, DecoderTrap::Strict)
-            .map_err(|e| Error::from(e.to_string()))
-            .chain_err(|| Error::from(ErrorKind::DecodingError))
+fn decode_bytes_to_string(content: &[u8], encoding: &'static Encoding) -> Result<String> {
+    let (decoded, _, replaced) = encoding.decode(content);
+    if replaced {
+        Err(Error::from(ErrorKind::DecodingError))
+    } else {
+        Ok(decoded.into_owned())
+    }
 }
 
 /// Parse all subtitle formats, invoking the right parser given by `format`.
@@ -168,21 +162,12 @@ fn decode_bytes_to_string(content: &[u8], encoding: EncodingRef) -> Result<Strin
 /// seconds/minutes/... but in frame numbers. So the timing `0 to 30` means "show subtitle for one second"
 /// for a 30fps video, and "show subtitle for half second" for 60fps videos. The parameter specifies how
 /// frame numbers are converted into timestamps.
-pub fn parse_bytes(format: SubtitleFormat, content: &[u8], encoding: EncodingRef, fps: f64) -> Result<Box<ClonableSubtitleFile>> {
+pub fn parse_bytes(format: SubtitleFormat, content: &[u8], encoding: &'static Encoding, fps: f64) -> Result<Box<ClonableSubtitleFile>> {
     match format {
-        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(
-            &decode_bytes_to_string(content, encoding)?,
-        )?)),
-        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(
-            &decode_bytes_to_string(content, encoding)?,
-        )?)),
-        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(
-            &decode_bytes_to_string(content, encoding)?,
-        )?)),
+        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
+        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
+        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
         SubtitleFormat::VobSubSub => Ok(Box::new(vobsub::VobFile::parse(content)?)),
-        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(
-            &decode_bytes_to_string(content, encoding)?,
-            fps,
-        )?)),
+        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(&decode_bytes_to_string(content, encoding)?, fps)?)),
     }
 }

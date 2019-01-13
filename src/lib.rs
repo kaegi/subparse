@@ -2,14 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#![deny(missing_docs,
-        missing_debug_implementations, missing_copy_implementations,
-        trivial_casts, trivial_numeric_casts,
-        unsafe_code,
-        unstable_features,
-        unused_import_braces, unused_qualifications)]
-
-
+#![deny(
+    missing_docs,
+    missing_debug_implementations,
+    missing_copy_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications
+)]
 
 //! This crate provides a common interface for popular subtitle formats (`.srt`, `.ssa`, `.ass`, `.idx`, `.sub`).
 //!
@@ -20,9 +23,9 @@
 #[macro_use]
 extern crate error_chain;
 extern crate combine;
-extern crate vobsub;
+extern crate encoding_rs;
 extern crate itertools;
-extern crate encoding;
+extern crate vobsub;
 
 mod formats;
 
@@ -32,18 +35,17 @@ pub mod timetypes;
 /// Error-chain generated error types.
 pub mod errors;
 
-
 use errors::*;
-pub use formats::{get_subtitle_format, get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, get_subtitle_format_err, parse_bytes,
-                  parse_str};
-pub use formats::SubtitleFormat;
 pub use formats::idx::IdxFile;
 pub use formats::microdvd::MdvdFile;
 pub use formats::srt::SrtFile;
 pub use formats::ssa::SsaFile;
 pub use formats::vobsub::VobFile;
+pub use formats::SubtitleFormat;
+pub use formats::{
+    get_subtitle_format, get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, get_subtitle_format_err, parse_bytes, parse_str,
+};
 use timetypes::TimeSpan;
-
 
 /// This trait represents the generic interface for reading and writing subtitle information across all subtitle formats.
 ///
@@ -95,9 +97,6 @@ impl SubtitleEntry {
 
 impl From<TimeSpan> for SubtitleEntry {
     fn from(f: TimeSpan) -> SubtitleEntry {
-        SubtitleEntry {
-            timespan: f,
-            line: None,
-        }
+        SubtitleEntry { timespan: f, line: None }
     }
 }
