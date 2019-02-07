@@ -132,7 +132,7 @@ where
 type SplittedLine = (String /* string */, String /* newline string like \n or \r\n */);
 
 /// Iterates over all lines in `s` and calls the `process_line` closure for every line and line ending.
-/// This ensures that we can reconstuct the file with correct line endings.
+/// This ensures that we can reconstruct the file with correct line endings.
 ///
 /// This will also accept the line ending `\r` (not within `\r\n`) to avoid error handling.
 pub fn get_lines_non_destructive(s: &str) -> Vec<SplittedLine> {

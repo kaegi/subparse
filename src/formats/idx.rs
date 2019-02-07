@@ -80,7 +80,7 @@ impl SubtitleFile for IdxFile {
         Ok(match timings.last() {
             Some(&last_timing) => {
                 // .idx files do not store timespans. Every subtitle is shown until the next subtitle
-                // starts. Mpv shows the last subtile for exactly one minute.
+                // starts. Mpv shows the last subtitle for exactly one minute.
                 let next_timings = timings.iter().cloned().skip(1).chain(once(
                     last_timing +
                         TimeDelta::from_mins(1),

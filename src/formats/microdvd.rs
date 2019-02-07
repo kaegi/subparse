@@ -170,7 +170,7 @@ impl MdvdFile {
     // Parses something like "{0}{25}{C:$0000ff}{y:b,u}{f:DeJaVuSans}{s:12}Hello!|{s:15}Hello2!"
     fn parse_line(line_num: usize, line: &str) -> Result<Vec<MdvdLine>> {
 
-        /// Matches the regex "\{[^}]*\}"; parses something like "{some_info}".
+        // Matches the regex "\{[^}]*\}"; parses something like "{some_info}".
         let sub_info = (char('{'), many(satisfy(|c| c != '}')), char('}'))
             .map(|(_, info, _): (_, String, _)| info)
             .expected("MicroDVD info");
