@@ -152,13 +152,13 @@ fn decode_bytes_to_string(content: &[u8], encoding: &'static Encoding) -> Result
 ///
 /// # Mandatory format specific options
 ///
-/// Some subtitle formats require additional paramters to work as expected. If you want to parse
-/// a specific format that has no additional paramters, you can use the `parse` function of
+/// Some subtitle formats require additional parameters to work as expected. If you want to parse
+/// a specific format that has no additional parameters, you can use the `parse` function of
 /// the respective `***File` struct.
 ///
 /// `encoding`: to parse a text-based subtitle format, a character encoding is needed
 ///
-/// `fps`: this paramter is used for `MicroDVD` `.sub` files. These files do not store timestamps in
+/// `fps`: this parameter is used for `MicroDVD` `.sub` files. These files do not store timestamps in
 /// seconds/minutes/... but in frame numbers. So the timing `0 to 30` means "show subtitle for one second"
 /// for a 30fps video, and "show subtitle for half second" for 60fps videos. The parameter specifies how
 /// frame numbers are converted into timestamps.

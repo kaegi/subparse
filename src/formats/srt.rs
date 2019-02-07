@@ -140,7 +140,7 @@ impl SrtFile {
     /// Matches a `SubRip` timespan like "00:24:45,670 --> 00:24:45,680".
     fn parse_timespan_line(line_num: usize, line: &str) -> Result<TimeSpan> {
 
-        /// Matches a `SubRip` timestamp like "00:24:45,670"
+        // Matches a `SubRip` timestamp like "00:24:45,670"
         let timestamp = |s| {
             (
                 p(number_i64),
