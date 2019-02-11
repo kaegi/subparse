@@ -101,8 +101,9 @@ pub fn get_subtitle_format_err(ending: &str, content: &[u8]) -> Result<SubtitleF
     get_subtitle_format(ending, content).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
 }
 
-// This trick works around the limitation, that trait objects can not require Sized (or Clone).
+/// This trick works around the limitation, that trait objects can not require Sized (or Clone).
 pub trait ClonableSubtitleFile: SubtitleFile + Send + Sync {
+    /// Returns a boxed clone
     fn clone_box(&self) -> Box<ClonableSubtitleFile>;
 }
 impl<T> ClonableSubtitleFile for T
