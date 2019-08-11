@@ -20,5 +20,5 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-subparse = "0.5.0"
+subparse = "0.6.0"
 ```
