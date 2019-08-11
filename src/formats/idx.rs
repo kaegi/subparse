@@ -20,8 +20,6 @@ use std::iter::once;
 /// `.idx`-parser-specific errors
 #[allow(missing_docs)]
 pub mod errors {
-    pub use crate::define_error;
-
     pub type Result<T> = std::result::Result<T, Error>;
 
     define_error!(Error, ErrorKind);
@@ -171,7 +169,7 @@ impl IdxFile {
     }
 
     fn parse_line(line_num: usize, s: String) -> Result<Vec<IdxFilePart>> {
-        if !s.trim_left().starts_with("timestamp:") {
+        if !s.trim_start().starts_with("timestamp:") {
             return Ok(vec![IdxFilePart::Filler(s)]);
         }
 

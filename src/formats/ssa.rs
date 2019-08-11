@@ -23,8 +23,6 @@ use self::errors::ErrorKind::*;
 #[allow(missing_docs)]
 pub mod errors {
 
-    pub use crate::define_error;
-
     define_error!(Error, ErrorKind);
 
     /// `.ssa`-parser-specific errors

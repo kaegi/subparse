@@ -26,8 +26,6 @@ use std::collections::LinkedList;
 pub mod errors {
     pub type Result<T> = std::result::Result<T, Error>;
 
-    pub use crate::define_error;
-
     define_error!(Error, ErrorKind);
 
     #[derive(PartialEq, Debug, Fail)]

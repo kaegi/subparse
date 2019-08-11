@@ -24,7 +24,6 @@ type Result<T> = std::result::Result<T, Error>;
 /// Errors specific to `.srt`-parsing.
 #[allow(missing_docs)]
 pub mod errors {
-    pub use crate::define_error;
 
     define_error!(Error, ErrorKind);
 

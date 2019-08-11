@@ -20,21 +20,21 @@
 //! The focus is on non-destructive parsing, meaning that formatting and other information are preserved
 //! if not explicitely changed.
 
-#[macro_use]
-extern crate error_chain;
 extern crate combine;
 extern crate encoding_rs;
 extern crate failure;
 extern crate itertools;
 extern crate vobsub;
 
+
+/// Error-chain generated error types.
+#[macro_use]
+pub mod errors;
+
 mod formats;
 
 /// Types that represent a time point, duration and time span.
 pub mod timetypes;
-
-/// Error-chain generated error types.
-pub mod errors;
 
 use errors::*;
 pub use formats::idx::IdxFile;

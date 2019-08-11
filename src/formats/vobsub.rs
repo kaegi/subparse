@@ -15,8 +15,6 @@ use vobsub;
 pub mod errors {
     use vobsub;
 
-    use crate::define_error;
-
     define_error!(Error, ErrorKind);
 
     #[derive(Debug, Fail)]
