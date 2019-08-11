@@ -65,6 +65,17 @@ pub fn get_subtitle_format_by_ending(ending: &str) -> Option<SubtitleFormat> {
     }
 }
 
+/// Returns true if the filepath/filename/fileending is valid for the given subtitle format.
+pub fn check_ending_for_subtitle_format(ending: &str, format: SubtitleFormat) -> bool {
+    match format {
+        SubtitleFormat::SubRip => ending.ends_with(".srt"),
+        SubtitleFormat::SubStationAlpha => ending.ends_with(".ssa") || ending.ends_with(".ass"),
+        SubtitleFormat::VobSubIdx => ending.ends_with(".idx"),
+        SubtitleFormat::VobSubSub => ending.ends_with(".sub"),
+        SubtitleFormat::MicroDVD => ending.ends_with(".sub"),
+    }
+}
+
 /// Returns the subtitle format by the file ending.
 ///
 /// Works exactly like `get_subtitle_format_by_ending`, but instead of `None` a `UnknownFileFormat`
