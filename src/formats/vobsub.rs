@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
 use self::errors::*;
-use {SubtitleEntry, SubtitleFile, SubtitleFormat};
-use errors::Result as SubtitleParserResult;
-use timetypes::{TimePoint, TimeSpan};
+use crate::errors::Result as SubtitleParserResult;
+use crate::timetypes::{TimePoint, TimeSpan};
+use crate::{SubtitleEntry, SubtitleFile, SubtitleFormat};
+use failure::ResultExt;
 
 use vobsub;
 
@@ -15,16 +15,18 @@ use vobsub;
 pub mod errors {
     use vobsub;
 
-    // see https://docs.rs/error-chain
-    error_chain! {
-        foreign_links {
-            VobSubError(vobsub::Error)
-            /// Error from the `vobsub` crate
-            ;
-        }
+    use crate::define_error;
+
+    define_error!(Error, ErrorKind);
+
+    #[derive(Debug, Fail)]
+    pub enum ErrorKind {
+        // TODO: Vobsub-ErrorKind display
+        /// Since `vobsub::Error` does not implement Sync. We cannot use #[cause] for it.
+        #[fail(display = "VobSub error occured")]
+        VobSubError { cause: vobsub::ErrorKind },
     }
 }
-
 
 #[derive(Debug, Clone)]
 /// Represents a `.sub` (`VobSub`) file.
@@ -58,7 +60,10 @@ impl VobFile {
                 })
             })
             .collect::<vobsub::Result<Vec<VobSubSubtitle>>>()
-            .map_err(Error::from)?;
+            .map_err(|e| ErrorKind::VobSubError {
+                cause: vobsub::ErrorKind::from(e),
+            })
+            .with_context(|_| crate::errors::ErrorKind::ParsingError)?;
 
         Ok(VobFile {
             data: b.to_vec(),
@@ -69,23 +74,21 @@ impl VobFile {
 
 impl SubtitleFile for VobFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
-        Ok(
-            self.lines
-                .iter()
-                .map(|vsub| {
-                SubtitleEntry {
-                    timespan: vsub.timespan,
-                    line: None,
-                }
+        Ok(self
+            .lines
+            .iter()
+            .map(|vsub| SubtitleEntry {
+                timespan: vsub.timespan,
+                line: None,
             })
-                .collect(),
-        )
+            .collect())
     }
 
     fn update_subtitle_entries(&mut self, _: &[SubtitleEntry]) -> SubtitleParserResult<()> {
-        Err(
-            ::errors::ErrorKind::UpdatingEntriesNotSupported(SubtitleFormat::VobSubSub).into(),
-        )
+        Err(crate::errors::ErrorKind::UpdatingEntriesNotSupported {
+            format: SubtitleFormat::VobSubSub,
+        }
+        .into())
     }
 
     fn to_data(&self) -> SubtitleParserResult<Vec<u8>> {

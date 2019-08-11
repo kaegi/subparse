@@ -2,54 +2,87 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use crate::{SubtitleEntry, SubtitleFile};
 
-
-use self::errors::*;
-use self::errors::ErrorKind::*;
-use {SubtitleEntry, SubtitleFile};
-
+use crate::errors::Result as SubtitleParserResult;
+use crate::formats::common::*;
 use combine::char::*;
 use combine::combinator::*;
 use combine::primitives::Parser;
-use errors::Result as SubtitleParserResult;
-use formats::common::*;
 
+use crate::timetypes::{TimePoint, TimeSpan};
+use failure::ResultExt;
 use std::iter::once;
-use timetypes::{TimePoint, TimeSpan};
 
-/// `.ssa`-parser-specific errors
+type Result<T> = std::result::Result<T, Error>;
+
+use self::errors::Error;
+use self::errors::ErrorKind::*;
+
+// Errors specific to the '.ssa' format.
 #[allow(missing_docs)]
 pub mod errors {
-    // see https://docs.rs/error-chain/0.8.1/error_chain/
-    error_chain! {
-        errors {
-            SsaFieldsInfoNotFound {
-                description(".ssa/.ass file did not have a line beginning with `Format: ` in a `[Events]` section")
-            }
-            SsaMissingField(line_num: usize, f: &'static str) {
-                display("the '{}' field is missing in the field info in line {}", f, line_num)
-            }
-            SsaDuplicateField(line_num: usize, f: &'static str) {
-                display("the '{}' field is twice in the field info in line {}", f, line_num)
-            }
-            SsaTextFieldNotLast(line_num: usize) {
-                display("the field info in line {} has to have `Text` as its last field", line_num)
-            }
-            SsaIncorrectNumberOfFields(line_num: usize) {
-                display("the dialog at line {} has incorrect number of fields", line_num)
-            }
-            SsaWrongTimepointFormat(line_num: usize, string: String) {
-                display("the timepoint `{}` in line {} has wrong format", string, line_num)
-            }
-            SsaDialogLineParseError(line_num: usize, msg: String) {
-                display("parsing the line `{}` failed because of `{}`", line_num, msg)
-            }
-            SsaLineParseError(line_num: usize, msg: String) {
-                display("parsing the line `{}` failed because of `{}`", line_num, msg)
-            }
-        }
+
+    pub use crate::define_error;
+
+    define_error!(Error, ErrorKind);
+
+    /// `.ssa`-parser-specific errors
+    #[derive(PartialEq, Debug, Fail)]
+    pub enum ErrorKind {
+        #[fail(display = ".ssa/.ass file did not have a line beginning with `Format: ` in a `[Events]` section")]
+        SsaFieldsInfoNotFound,
+
+        #[fail(display = "the '{}' field is missing in the field info in line {}", f, line_num)]
+        SsaMissingField { line_num: usize, f: &'static str },
+
+        #[fail(display = "the '{}' field is twice in the field info in line {}", f, line_num)]
+        SsaDuplicateField { line_num: usize, f: &'static str },
+
+        #[fail(display = "the field info in line {} has to have `Text` as its last field", line_num)]
+        SsaTextFieldNotLast { line_num: usize },
+
+        #[fail(display = "the dialog at line {} has incorrect number of fields", line_num)]
+        SsaIncorrectNumberOfFields { line_num: usize },
+
+        #[fail(display = "the timepoint `{}` in line {} has wrong format", string, line_num)]
+        SsaWrongTimepointFormat { line_num: usize, string: String },
+
+        #[fail(display = "parsing the line `{}` failed because of `{}`", line_num, msg)]
+        SsaDialogLineParseError { line_num: usize, msg: String },
+
+        #[fail(display = "parsing the line `{}` failed because of `{}`", line_num, msg)]
+        SsaLineParseError { line_num: usize, msg: String },
     }
 }
+/*error_chain! {
+    errors {
+        SsaFieldsInfoNotFound {
+            description(".ssa/.ass file did not have a line beginning with `Format: ` in a `[Events]` section")
+        }
+        SsaMissingField(line_num: usize, f: &'static str) {
+            display("the '{}' field is missing in the field info in line {}", f, line_num)
+        }
+        SsaDuplicateField(line_num: usize, f: &'static str) {
+            display("the '{}' field is twice in the field info in line {}", f, line_num)
+        }
+        SsaTextFieldNotLast(line_num: usize) {
+            display("the field info in line {} has to have `Text` as its last field", line_num)
+        }
+        SsaIncorrectNumberOfFields(line_num: usize) {
+            display("the dialog at line {} has incorrect number of fields", line_num)
+        }
+        SsaWrongTimepointFormat(line_num: usize, string: String) {
+            display("the timepoint `{}` in line {} has wrong format", string, line_num)
+        }
+        SsaDialogLineParseError(line_num: usize, msg: String) {
+            display("parsing the line `{}` failed because of `{}`", line_num, msg)
+        }
+        SsaLineParseError(line_num: usize, msg: String) {
+            display("parsing the line `{}` failed because of `{}`", line_num, msg)
+        }
+    }
+}*/
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 // SSA field info
@@ -77,42 +110,35 @@ impl SsaFieldsInfo {
             let trimmed = field_name.trim();
             if trimmed == "Start" {
                 if start_field_idx.is_some() {
-                    return Err(SsaDuplicateField(line_num, "Start"))?;
+                    return Err(SsaDuplicateField { line_num, f: "Start" })?;
                 }
                 start_field_idx = Some(i);
             } else if trimmed == "End" {
                 if end_field_idx.is_some() {
-                    return Err(SsaDuplicateField(line_num, "End"))?;
+                    return Err(SsaDuplicateField { line_num, f: "End" })?;
                 }
                 end_field_idx = Some(i);
             } else if trimmed == "Text" {
                 if text_field_idx.is_some() {
-                    return Err(SsaDuplicateField(line_num, "Text"))?;
+                    return Err(SsaDuplicateField { line_num, f: "Text" })?;
                 }
                 text_field_idx = Some(i);
             }
         }
 
-        let text_field_idx2 = text_field_idx.ok_or_else(|| {
-            Error::from(SsaMissingField(line_num, "Text"))
-        })?;
+        let text_field_idx2 = text_field_idx.ok_or_else(|| Error::from(SsaMissingField { line_num, f: "Text" }))?;
         if text_field_idx2 != num_fields - 1 {
-            return Err(SsaTextFieldNotLast(line_num))?;
+            return Err(SsaTextFieldNotLast { line_num })?;
         }
 
         Ok(SsaFieldsInfo {
-            start_field_idx: start_field_idx.ok_or_else(|| {
-                Error::from(SsaMissingField(line_num, "Start"))
-            })?,
-            end_field_idx: end_field_idx.ok_or_else(|| {
-                Error::from(SsaMissingField(line_num, "End"))
-            })?,
+            start_field_idx: start_field_idx.ok_or_else(|| Error::from(SsaMissingField { line_num, f: "Start" }))?,
+            end_field_idx: end_field_idx.ok_or_else(|| Error::from(SsaMissingField { line_num, f: "End" }))?,
             text_field_idx: text_field_idx2,
             num_fields: num_fields,
         })
     }
 }
-
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 // SSA parser
@@ -120,10 +146,7 @@ impl SsaFieldsInfo {
 impl SsaFile {
     /// Parse a `.ssa` subtitle string to `SsaFile`.
     pub fn parse(s: &str) -> SubtitleParserResult<SsaFile> {
-        match Self::parse_inner(s.to_string()) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(e.into()),
-        }
+        Ok(Self::parse_inner(s.to_string()).with_context(|_| crate::ErrorKind::ParsingError)?)
     }
 }
 
@@ -193,11 +216,7 @@ impl SsaFile {
                 continue;
             }
 
-            result.append(&mut Self::parse_dialog_line(
-                line_num,
-                line.as_str(),
-                fields_info,
-            )?);
+            result.append(&mut Self::parse_dialog_line(line_num, line.as_str(), fields_info)?);
             result.push(SsaFilePart::Filler(newl));
         }
 
@@ -214,37 +233,32 @@ impl SsaFile {
             many(ws()),
             string("Dialogue:"),
             many(ws()),
-            count(fields_info.num_fields - 1, (
-                many(none_of(once(','))),
-                token(','),
-            )),
-            many(try(any())),
+            count(fields_info.num_fields - 1, (many(none_of(once(','))), token(','))),
+            many(r#try(any())),
         )
-                        .map(|(ws1, dl, ws2, v, text): (String,
-                                   &str,
-                                   String,
-                                   Vec<(String, char)>,
-                                   String)|
-         -> Result<Vec<SsaFilePart>> {
-            let mut result: Vec<SsaFilePart> = Vec::new();
-            result.push(SsaFilePart::Filler(ws1));
-            result.push(SsaFilePart::Filler(dl.to_string()));
-            result.push(SsaFilePart::Filler(ws2.to_string()));
-            result.append(&mut Self::parse_fields(line_num, fields_info, v)?);
-            result.push(SsaFilePart::Text(text));
-            Ok(result)
-        })
-                        .parse(line);
+            .map(
+                |(ws1, dl, ws2, v, text): (String, &str, String, Vec<(String, char)>, String)| -> Result<Vec<SsaFilePart>> {
+                    let mut result: Vec<SsaFilePart> = Vec::new();
+                    result.push(SsaFilePart::Filler(ws1));
+                    result.push(SsaFilePart::Filler(dl.to_string()));
+                    result.push(SsaFilePart::Filler(ws2.to_string()));
+                    result.append(&mut Self::parse_fields(line_num, fields_info, v)?);
+                    result.push(SsaFilePart::Text(text));
+                    Ok(result)
+                },
+            )
+            .parse(line);
 
         match parts_res {
             // Ok() means that parsing succeded, but the "map" function might created an SSA error
             Ok((parts, _)) => Ok(parts?),
-            Err(e) => Err(
-                SsaDialogLineParseError(line_num, parse_error_to_string(e)).into(),
-            ),
+            Err(e) => Err(SsaDialogLineParseError {
+                line_num,
+                msg: parse_error_to_string(e),
+            }
+            .into()),
         }
     }
-
 
     /// Parses an array of fields with the "fields info".
     ///
@@ -272,18 +286,19 @@ impl SsaFile {
             ])
         };
 
-        let result = v.into_iter()
-                      .enumerate()
-                      .map(extract_file_parts_closure)
-                      .collect::<Result<Vec<Vec<SsaFilePart>>>>()?
-                      .into_iter()
-                      .flat_map(|part| part)
-                      .collect();
+        let result = v
+            .into_iter()
+            .enumerate()
+            .map(extract_file_parts_closure)
+            .collect::<Result<Vec<Vec<SsaFilePart>>>>()?
+            .into_iter()
+            .flat_map(|part| part)
+            .collect();
         Ok(result)
     }
 
     /// Something like "0:19:41.99"
-    fn parse_timepoint(line: usize, s: &str) -> Result<TimePoint> {
+    fn parse_timepoint(line_num: usize, s: &str) -> Result<TimePoint> {
         let parse_res = (
             parser(number_i64),
             token(':'),
@@ -294,15 +309,15 @@ impl SsaFile {
             parser(number_i64),
             eof(),
         )
-                        .map(|(h, _, mm, _, ss, _, ms, _)| {
-            TimePoint::from_components(h, mm, ss, ms * 10)
-        })
-                        .parse(s);
+            .map(|(h, _, mm, _, ss, _, ms, _)| TimePoint::from_components(h, mm, ss, ms * 10))
+            .parse(s);
         match parse_res {
             Ok(res) => Ok(res.0),
-            Err(e) => Err(
-                SsaWrongTimepointFormat(line, parse_error_to_string(e)).into(),
-            ),
+            Err(e) => Err(SsaWrongTimepointFormat {
+                line_num,
+                string: parse_error_to_string(e),
+            }
+            .into()),
         }
     }
 }
@@ -324,7 +339,6 @@ enum SsaFilePart {
     /// Dialog lines
     Text(String),
 }
-
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 // SSA file
@@ -377,12 +391,8 @@ impl SsaFile {
                         let snatched_startpoint_buffer = startpoint_buffer.take();
                         let snatched_endpoint_buffer = endpoint_buffer.take();
 
-                        let start = snatched_startpoint_buffer.expect(
-                            "SSA parser should have ensured that every line has a startpoint",
-                        );
-                        let end = snatched_endpoint_buffer.expect(
-                            "SSA parser should have ensured that every line has a endpoint",
-                        );
+                        let start = snatched_startpoint_buffer.expect("SSA parser should have ensured that every line has a startpoint");
+                        let end = snatched_endpoint_buffer.expect("SSA parser should have ensured that every line has a endpoint");
 
                         Some((start, end, text))
                     }
@@ -410,12 +420,11 @@ impl SubtitleFile for SsaFile {
         // not-time-critical code is acceptable, and after HKT become
         // available, this can be solved much nicer.
         let mut new_file = self.clone();
-        let timings = new_file.get_subtitle_entries_mut()
-                              .into_iter()
-                              .map(|(&mut start, &mut end, text)| {
-            SubtitleEntry::new(TimeSpan::new(start, end), text.clone())
-        })
-                              .collect();
+        let timings = new_file
+            .get_subtitle_entries_mut()
+            .into_iter()
+            .map(|(&mut start, &mut end, text)| SubtitleEntry::new(TimeSpan::new(start, end), text.clone()))
+            .collect();
 
         Ok(timings)
     }

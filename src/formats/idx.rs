@@ -2,32 +2,34 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
-
-
-use self::errors::*;
 use self::errors::ErrorKind::*; // the crate wide error type (we use a custom error type here)
+use self::errors::*;
 use super::common::*;
-use {SubtitleEntry, SubtitleFile};
+use crate::{SubtitleEntry, SubtitleFile};
 
+use crate::errors::Result as SubtitleParserResult;
 use combine::char::*;
 use combine::combinator::*;
 use combine::primitives::Parser;
-use errors::Result as SubtitleParserResult;
 
+use failure::ResultExt;
+
+use crate::timetypes::{TimeDelta, TimePoint, TimeSpan};
 use std::iter::once;
-use timetypes::{TimeDelta, TimePoint, TimeSpan};
 
 /// `.idx`-parser-specific errors
 #[allow(missing_docs)]
 pub mod errors {
-    // see https://docs.rs/error-chain/0.8.1/error_chain/
-    error_chain! {
-        errors {
-            IdxLineParseError(line_num: usize, msg: String) {
-                display("parsing the line `{}` failed because of `{}`", line_num, msg)
-            }
-        }
+    pub use crate::define_error;
+
+    pub type Result<T> = std::result::Result<T, Error>;
+
+    define_error!(Error, ErrorKind);
+
+    #[derive(PartialEq, Debug, Fail)]
+    pub enum ErrorKind {
+        #[fail(display = "parsing the line `{}` failed because of `{}`", line_num, msg)]
+        IdxLineParseError { line_num: usize, msg: String },
     }
 }
 
@@ -42,7 +44,6 @@ enum IdxFilePart {
     /// Represents a parsed time string like "00:42:20:204".
     Timestamp(TimePoint),
 }
-
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////
 // .idx file
@@ -69,28 +70,27 @@ impl IdxFile {
 
 impl SubtitleFile for IdxFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
-        let timings: Vec<_> = self.v
-                                  .iter()
-                                  .filter_map(|file_part| match *file_part {
-            IdxFilePart::Filler(_) => None,
-            IdxFilePart::Timestamp(t) => Some(t),
-        })
-                                  .collect();
+        let timings: Vec<_> = self
+            .v
+            .iter()
+            .filter_map(|file_part| match *file_part {
+                IdxFilePart::Filler(_) => None,
+                IdxFilePart::Timestamp(t) => Some(t),
+            })
+            .collect();
 
         Ok(match timings.last() {
             Some(&last_timing) => {
                 // .idx files do not store timespans. Every subtitle is shown until the next subtitle
                 // starts. Mpv shows the last subtitle for exactly one minute.
-                let next_timings = timings.iter().cloned().skip(1).chain(once(
-                    last_timing +
-                        TimeDelta::from_mins(1),
-                ));
-                timings.iter()
-                       .cloned()
-                       .zip(next_timings)
-                       .map(|time_tuple| TimeSpan::new(time_tuple.0, time_tuple.1))
-                       .map(SubtitleEntry::from)
-                       .collect()
+                let next_timings = timings.iter().cloned().skip(1).chain(once(last_timing + TimeDelta::from_mins(1)));
+                timings
+                    .iter()
+                    .cloned()
+                    .zip(next_timings)
+                    .map(|time_tuple| TimeSpan::new(time_tuple.0, time_tuple.1))
+                    .map(SubtitleEntry::from)
+                    .collect()
             }
             None => {
                 // no timings
@@ -149,13 +149,9 @@ impl SubtitleFile for IdxFile {
 impl IdxFile {
     /// Parse a `.idx` subtitle string to `IdxFile`.
     pub fn parse(s: &str) -> SubtitleParserResult<IdxFile> {
-        match IdxFile::parse_inner(s) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(e.into()),
-        }
+        Ok(Self::parse_inner(s).with_context(|_| crate::ErrorKind::ParsingError)?)
     }
 }
-
 
 // implement parsing functions
 impl IdxFile {
@@ -184,37 +180,49 @@ impl IdxFile {
             string("timestamp:"),
             many(ws()),
             many(or(digit(), token(':'))),
-            many(try(any())),
+            many(r#try(any())),
             eof(),
         )
-        .map(|(ws1, s1, ws2, timestamp_str, s2, _): (String,
-                                                &str,
-                                                String,
-                                                String,
-                                                String,
-                                                ())|
-         -> Result<Vec<IdxFilePart>> {
-            let mut result = Vec::<IdxFilePart>::new();
-            result.push(IdxFilePart::Filler(ws1));
-            result.push(IdxFilePart::Filler(s1.to_string()));
-            result.push(IdxFilePart::Filler(ws2));
-            result.push(IdxFilePart::Timestamp(
-                Self::parse_timestamp(line_num, timestamp_str.as_str())?,
-            ));
-            result.push(IdxFilePart::Filler(s2.to_string()));
-            Ok(result)
-        })
-        .parse(s.as_str())
-        .map_err(|e| IdxLineParseError(line_num, parse_error_to_string(e)))?
-        .0
+            .map(
+                |(ws1, s1, ws2, timestamp_str, s2, _): (String, &str, String, String, String, ())| -> Result<Vec<IdxFilePart>> {
+                    let mut result = Vec::<IdxFilePart>::new();
+                    result.push(IdxFilePart::Filler(ws1));
+                    result.push(IdxFilePart::Filler(s1.to_string()));
+                    result.push(IdxFilePart::Filler(ws2));
+                    result.push(IdxFilePart::Timestamp(Self::parse_timestamp(line_num, timestamp_str.as_str())?));
+                    result.push(IdxFilePart::Filler(s2.to_string()));
+                    Ok(result)
+                },
+            )
+            .parse(s.as_str())
+            .map_err(|e| IdxLineParseError {
+                line_num,
+                msg: parse_error_to_string(e),
+            })?
+            .0
     }
 
     /// Parse an .idx timestamp like `00:41:36:961`.
     fn parse_timestamp(line_num: usize, s: &str) -> Result<TimePoint> {
-        (parser(number_i64), token(':'), parser(number_i64), token(':'), parser(number_i64), token(':'), parser(number_i64), eof())
+        (
+            parser(number_i64),
+            token(':'),
+            parser(number_i64),
+            token(':'),
+            parser(number_i64),
+            token(':'),
+            parser(number_i64),
+            eof(),
+        )
             .map(|(hours, _, mins, _, secs, _, msecs, _)| TimePoint::from_components(hours, mins, secs, msecs))
             .parse(s) // <- return type is ParseResult<(Timing, &str)>
             .map(|(file_part, _)| file_part)
-            .map_err(|e| IdxLineParseError(line_num, parse_error_to_string(e)).into())
+            .map_err(|e| {
+                IdxLineParseError {
+                    line_num,
+                    msg: parse_error_to_string(e),
+                }
+                .into()
+            })
     }
 }

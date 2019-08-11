@@ -2,10 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
-
-
-
 use combine::char::*;
 use combine::combinator::*;
 use combine::primitives::{ParseError, ParseResult, Parser, Stream};
@@ -35,15 +31,11 @@ fn test_split_bom() {
 
     // Rust doesn't seem to let us create a BOM as str in a safe way.
     assert_eq!(
-        split_bom(unsafe {
-            ::std::str::from_utf8_unchecked(&[0xEF, 0xBB, 0xBF, 'a' as u8, 'b' as u8, 'c' as u8])
-        }),
+        split_bom(unsafe { ::std::str::from_utf8_unchecked(&[0xEF, 0xBB, 0xBF, 'a' as u8, 'b' as u8, 'c' as u8]) }),
         (bom1, "abc")
     );
     assert_eq!(
-        split_bom(unsafe {
-            ::std::str::from_utf8_unchecked(&[0xFE, 0xFF, 'd' as u8, 'e' as u8, 'g' as u8])
-        }),
+        split_bom(unsafe { ::std::str::from_utf8_unchecked(&[0xFE, 0xFF, 'd' as u8, 'e' as u8, 'g' as u8]) }),
         (bom2, "deg")
     );
     assert_eq!(split_bom("bla"), ("", "bla"));
@@ -88,15 +80,11 @@ where
     R: PartialEq + Clone + Display,
     P: Ord + Display,
 {
-    p.to_string().trim().lines().fold("".to_string(), |a, b| {
-        if a.is_empty() {
-            b.to_string()
-        } else {
-            a + "; " + b
-        }
-    })
+    p.to_string()
+        .trim()
+        .lines()
+        .fold("".to_string(), |a, b| if a.is_empty() { b.to_string() } else { a + "; " + b })
 }
-
 
 /// This function does a very common task for non-destructive parsers: merging mergable consecutive file parts.
 ///
@@ -107,7 +95,6 @@ pub fn dedup_string_parts<T, F>(v: Vec<T>, mut extract_fn: F) -> Vec<T>
 where
     F: FnMut(&mut T) -> Option<&mut String>,
 {
-
     let mut result = Vec::new();
     for mut part in v {
         let mut push_part = true;
@@ -181,22 +168,17 @@ fn get_lines_non_destructive_test0() {
     }
 }
 
-
 /// Trim a string left and right, but also preserve the white-space characters. The
 /// seconds element in the returned tuple contains the non-whitespace string.
 pub fn trim_non_destructive(s: &str) -> (String, String, String) {
     let (begin, rest) = trim_left(s);
     let (end, rest2) = trim_left(&rest.chars().rev().collect::<String>());
-    (
-        begin,
-        rest2.chars().rev().collect(),
-        end.chars().rev().collect(),
-    )
+    (begin, rest2.chars().rev().collect(), end.chars().rev().collect())
 }
 
 /// Splits a string in whitespace string and the rest "   hello " -> ("   ", "hello ").
 fn trim_left(s: &str) -> (String, String) {
-    (many(ws()), many(try(any())), eof())
+    (many(ws()), many(r#try(any())), eof())
         .map(|t| (t.0, t.1))
         .parse(s)
         .expect("the trim parser should accept any input")

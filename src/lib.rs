@@ -24,6 +24,7 @@
 extern crate error_chain;
 extern crate combine;
 extern crate encoding_rs;
+extern crate failure;
 extern crate itertools;
 extern crate vobsub;
 
@@ -41,10 +42,10 @@ pub use formats::microdvd::MdvdFile;
 pub use formats::srt::SrtFile;
 pub use formats::ssa::SsaFile;
 pub use formats::vobsub::VobFile;
-pub use formats::{ClonableSubtitleFile, SubtitleFormat};
 pub use formats::{
     get_subtitle_format, get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, get_subtitle_format_err, parse_bytes, parse_str,
 };
+pub use formats::{ClonableSubtitleFile, SubtitleFormat};
 use timetypes::TimeSpan;
 
 /// This trait represents the generic interface for reading and writing subtitle information across all subtitle formats.

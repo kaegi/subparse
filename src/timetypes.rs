@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
-
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 
@@ -82,7 +80,6 @@ impl Timing {
     }
 }
 
-
 impl Debug for Timing {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         write!(f, "Timing({})", self.to_string())
@@ -153,7 +150,6 @@ pub struct TimeDelta {
 
 macro_rules! create_time_type {
     ($i:ident) => {
-
         impl $i {
             fn new(t: Timing) -> $i {
                 $i { intern: t }
@@ -249,7 +245,11 @@ macro_rules! create_time_type {
 
             /// Return the absolute value of the current time.
             pub fn abs(&self) -> $i {
-                if self.is_negative() { -*self } else { *self }
+                if self.is_negative() {
+                    -*self
+                } else {
+                    *self
+                }
             }
         }
 
@@ -265,11 +265,11 @@ macro_rules! create_time_type {
                 write!(f, "{}", self.intern)
             }
         }
-    }
+    };
 }
 
-create_time_type!{TimePoint}
-create_time_type!{TimeDelta}
+create_time_type! {TimePoint}
+create_time_type! {TimeDelta}
 
 macro_rules! impl_add {
     ($a:ty, $b:ty, $output:ident) => {
@@ -279,7 +279,7 @@ macro_rules! impl_add {
                 $output::new(self.intern + rhs.intern)
             }
         }
-    }
+    };
 }
 
 macro_rules! impl_sub {
@@ -290,7 +290,7 @@ macro_rules! impl_sub {
                 $output::new(self.intern - rhs.intern)
             }
         }
-    }
+    };
 }
 
 macro_rules! impl_add_assign {
@@ -300,7 +300,7 @@ macro_rules! impl_add_assign {
                 self.intern += r.intern;
             }
         }
-    }
+    };
 }
 
 macro_rules! impl_sub_assign {
@@ -310,7 +310,7 @@ macro_rules! impl_sub_assign {
                 self.intern -= r.intern;
             }
         }
-    }
+    };
 }
 
 impl_add!(TimeDelta, TimeDelta, TimeDelta);
@@ -341,10 +341,7 @@ pub struct TimeSpan {
 impl TimeSpan {
     /// Constructor of `TimeSpan`s.
     pub fn new(start: TimePoint, end: TimePoint) -> TimeSpan {
-        TimeSpan {
-            start: start,
-            end: end,
-        }
+        TimeSpan { start: start, end: end }
     }
 
     /// Get the length of the `TimeSpan` (can be negative).

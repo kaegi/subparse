@@ -9,9 +9,9 @@ pub mod srt;
 pub mod ssa;
 pub mod vobsub;
 
+use crate::errors::*;
+use crate::SubtitleFile;
 use encoding_rs::Encoding;
-use errors::*;
-use SubtitleFile;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// All formats which are supported by this library.
