@@ -45,7 +45,7 @@ pub use formats::{
     get_subtitle_format, get_subtitle_format_by_extension, get_subtitle_format_by_extension_err, get_subtitle_format_err,
     is_valid_extension_for_subtitle_format, parse_bytes, parse_str,
 };
-pub use formats::{ClonableSubtitleFileInterface, SubtitleFormat};
+pub use formats::{SubtitleFile, SubtitleFormat};
 use timetypes::TimeSpan;
 
 /// This trait represents the generic interface for reading and writing subtitle information across all subtitle formats.

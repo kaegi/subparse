@@ -9,6 +9,7 @@ pub mod srt;
 pub mod ssa;
 pub mod vobsub;
 
+use crate::SubtitleEntry;
 use crate::errors::*;
 use crate::SubtitleFileInterface;
 use encoding_rs::Encoding;
@@ -32,6 +33,103 @@ pub enum SubtitleFormat {
     /// .sub file (`MicroDVD`/text)
     MicroDVD,
 }
+
+#[derive(Clone, Debug)]
+/// Unified wrapper around the all individual subtitle file types.
+pub enum SubtitleFile {
+    /// .srt file
+    SubRipFile(srt::SrtFile),
+
+    /// .ssa/.ass file
+    SubStationAlpha(ssa::SsaFile),
+
+    /// .idx file
+    VobSubIdxFile(idx::IdxFile),
+
+    /// .sub file (`VobSub`/binary)
+    VobSubSubFile(vobsub::VobFile),
+
+    /// .sub file (`MicroDVD`/text)
+    MicroDVDFile(microdvd::MdvdFile),
+}
+
+impl SubtitleFile {
+
+    /// The subtitle entries can be changed by calling `update_subtitle_entries()`.
+    pub fn get_subtitle_entries(&self) -> Result<Vec<SubtitleEntry>> {
+        match self {
+            SubtitleFile::SubRipFile(f) => f.get_subtitle_entries(),
+            SubtitleFile::SubStationAlpha(f) => f.get_subtitle_entries(),
+            SubtitleFile::VobSubIdxFile(f) => f.get_subtitle_entries(),
+            SubtitleFile::VobSubSubFile(f) => f.get_subtitle_entries(),
+            SubtitleFile::MicroDVDFile(f) => f.get_subtitle_entries(),
+        }
+    }
+
+    /// Set the entries from the subtitle entries from the `get_subtitle_entries()`.
+    ///
+    /// The length of the given input slice should always match the length of the vector length from
+    /// `get_subtitle_entries()`. This function can not delete/create new entries, but preserves
+    /// everything else in the file (formatting, authors, ...).
+    ///
+    /// If the input entry has `entry.line == None`, the line will not be overwritten.
+    ///
+    /// Be aware that .idx files cannot save time_spans_ (a subtitle will be shown between two
+    /// consecutive timepoints/there are no separate starts and ends) - so the timepoint will be set
+    /// to the start of the corresponding input-timespan.
+    pub fn update_subtitle_entries(&mut self, i: &[SubtitleEntry]) -> Result<()> {
+        match self {
+            SubtitleFile::SubRipFile(f) => f.update_subtitle_entries(i),
+            SubtitleFile::SubStationAlpha(f) => f.update_subtitle_entries(i),
+            SubtitleFile::VobSubIdxFile(f) => f.update_subtitle_entries(i),
+            SubtitleFile::VobSubSubFile(f) => f.update_subtitle_entries(i),
+            SubtitleFile::MicroDVDFile(f) => f.update_subtitle_entries(i),
+        }
+    }
+
+    /// Returns a byte-stream in the respective format (.ssa, .srt, etc.) with the
+    /// (probably) altered information.
+    pub fn to_data(&self) -> Result<Vec<u8>> {
+        match self {
+            SubtitleFile::SubRipFile(f) => f.to_data(),
+            SubtitleFile::SubStationAlpha(f) => f.to_data(),
+            SubtitleFile::VobSubIdxFile(f) => f.to_data(),
+            SubtitleFile::VobSubSubFile(f) => f.to_data(),
+            SubtitleFile::MicroDVDFile(f) => f.to_data(),
+        }
+    }
+}
+
+impl From<srt::SrtFile> for SubtitleFile {
+    fn from(f: srt::SrtFile) -> SubtitleFile {
+        SubtitleFile::SubRipFile(f)
+    }
+}
+
+impl From<ssa::SsaFile> for SubtitleFile {
+    fn from(f: ssa::SsaFile) -> SubtitleFile {
+        SubtitleFile::SubStationAlpha(f)
+    }
+}
+
+impl From<idx::IdxFile> for SubtitleFile {
+    fn from(f: idx::IdxFile) -> SubtitleFile {
+        SubtitleFile::VobSubIdxFile(f)
+    }
+}
+
+impl From<vobsub::VobFile> for SubtitleFile {
+    fn from(f: vobsub::VobFile) -> SubtitleFile {
+        SubtitleFile::VobSubSubFile(f)
+    }
+}
+
+impl From<microdvd::MdvdFile> for SubtitleFile {
+    fn from(f: microdvd::MdvdFile) -> SubtitleFile {
+        SubtitleFile::MicroDVDFile(f)
+    }
+}
+
 
 impl SubtitleFormat {
     /// Get a descriptive string for the format like `".srt (SubRip)"`.
@@ -123,26 +221,6 @@ pub fn get_subtitle_format_err(extension: Option<&OsStr>, content: &[u8]) -> Res
     get_subtitle_format(extension, content).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
 }
 
-/// This trick works around the limitation, that trait objects can not require Sized (or Clone).
-pub trait ClonableSubtitleFileInterface: SubtitleFileInterface + Send + Sync {
-    /// Returns a boxed clone
-    fn clone_box(&self) -> Box<ClonableSubtitleFileInterface>;
-}
-impl<T> ClonableSubtitleFileInterface for T
-where
-    T: SubtitleFileInterface + Clone + Send + Sync + 'static,
-{
-    fn clone_box(&self) -> Box<ClonableSubtitleFileInterface> {
-        Box::new(Clone::clone(self))
-    }
-}
-
-// We can now implement Clone manually by forwarding to clone_box.
-impl Clone for Box<ClonableSubtitleFileInterface> {
-    fn clone(&self) -> Box<ClonableSubtitleFileInterface> {
-        self.clone_box()
-    }
-}
 
 /// Parse text subtitles, invoking the right parser given by `format`.
 ///
@@ -151,13 +229,13 @@ impl Clone for Box<ClonableSubtitleFileInterface> {
 /// # Mandatory format specific options
 ///
 /// See `parse_bytes`.
-pub fn parse_str(format: SubtitleFormat, content: &str, fps: f64) -> Result<Box<ClonableSubtitleFileInterface>> {
+pub fn parse_str(format: SubtitleFormat, content: &str, fps: f64) -> Result<SubtitleFile> {
     match format {
-        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(content)?)),
-        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(content)?)),
-        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(content)?)),
+        SubtitleFormat::SubRip => Ok(srt::SrtFile::parse(content)?.into()),
+        SubtitleFormat::SubStationAlpha => Ok(ssa::SsaFile::parse(content)?.into()),
+        SubtitleFormat::VobSubIdx => Ok(idx::IdxFile::parse(content)?.into()),
         SubtitleFormat::VobSubSub => Err(ErrorKind::TextFormatOnly.into()),
-        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(content, fps)?)),
+        SubtitleFormat::MicroDVD => Ok(microdvd::MdvdFile::parse(content, fps)?.into()),
     }
 }
 
@@ -185,12 +263,12 @@ fn decode_bytes_to_string(content: &[u8], encoding: &'static Encoding) -> Result
 /// seconds/minutes/... but in frame numbers. So the timing `0 to 30` means "show subtitle for one second"
 /// for a 30fps video, and "show subtitle for half second" for 60fps videos. The parameter specifies how
 /// frame numbers are converted into timestamps.
-pub fn parse_bytes(format: SubtitleFormat, content: &[u8], encoding: &'static Encoding, fps: f64) -> Result<Box<ClonableSubtitleFileInterface>> {
+pub fn parse_bytes(format: SubtitleFormat, content: &[u8], encoding: &'static Encoding, fps: f64) -> Result<SubtitleFile> {
     match format {
-        SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
-        SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
-        SubtitleFormat::VobSubIdx => Ok(Box::new(idx::IdxFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
-        SubtitleFormat::VobSubSub => Ok(Box::new(vobsub::VobFile::parse(content)?)),
-        SubtitleFormat::MicroDVD => Ok(Box::new(microdvd::MdvdFile::parse(&decode_bytes_to_string(content, encoding)?, fps)?)),
+        SubtitleFormat::SubRip => Ok(srt::SrtFile::parse(&decode_bytes_to_string(content, encoding)?)?.into()),
+        SubtitleFormat::SubStationAlpha => Ok(ssa::SsaFile::parse(&decode_bytes_to_string(content, encoding)?)?.into()),
+        SubtitleFormat::VobSubIdx => Ok(idx::IdxFile::parse(&decode_bytes_to_string(content, encoding)?)?.into()),
+        SubtitleFormat::VobSubSub => Ok(vobsub::VobFile::parse(content)?.into()),
+        SubtitleFormat::MicroDVD => Ok(microdvd::MdvdFile::parse(&decode_bytes_to_string(content, encoding)?, fps)?.into()),
     }
 }
