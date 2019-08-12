@@ -144,17 +144,23 @@ impl SubtitleFormat {
     }
 }
 
-/// Returns the subtitle format by the file ending.
+#[test]
+fn test_subtitle_format_by_extension() {
+    // this shows how the input paramter can be crated from scratch
+    assert_eq!(get_subtitle_format_by_extension(Some(OsStr::new("srt"))), Some(SubtitleFormat::SubRip));
+}
+
+/// Returns the subtitle format by the file extension.
 ///
-/// Calling the function with the full file path or simply a `get_subtitle_format_by_ending(Some("srt"))`
+/// Calling the function with the full file path or simply a `get_subtitle_format_by_extension(Some(OsStr::new("srt")))`
 /// both work. Returns `None` if subtitle format could not be recognized.
 ///
-/// Because the `.sub` file ending is ambiguous (both `MicroDVD` and `VobSub` use that ending) the
+/// Because the `.sub` file extension is ambiguous (both `MicroDVD` and `VobSub` use that extension) the
 /// function will return `None` in that case. Instead, use the content-aware `get_subtitle_format`
 /// to handle this case correctly.
 ///
 /// `Option` is used to simplify handling with `PathBuf::extension()`.
-pub fn get_subtitle_format_by_extension<'a>(extension: Option<&OsStr>) -> Option<SubtitleFormat> {
+pub fn get_subtitle_format_by_extension(extension: Option<&OsStr>) -> Option<SubtitleFormat> {
     let _ext_opt: Option<&OsStr> = extension.into();
 
     if _ext_opt == Some(OsStr::new("srt")) {
@@ -168,7 +174,7 @@ pub fn get_subtitle_format_by_extension<'a>(extension: Option<&OsStr>) -> Option
     }
 }
 
-/// Returns true if the filepath/filename/file-extension is valid for the given subtitle format.
+/// Returns true if the file extension is valid for the given subtitle format.
 ///
 /// `Option` is used to simplify handling with `PathBuf::extension()`.
 pub fn is_valid_extension_for_subtitle_format(extension: Option<&OsStr>, format: SubtitleFormat) -> bool {
@@ -191,12 +197,12 @@ pub fn get_subtitle_format_by_extension_err(extension: Option<&OsStr>) -> Result
     get_subtitle_format_by_extension(extension).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
 }
 
-/// Returns the subtitle format by the file ending and provided content.
+/// Returns the subtitle format by the file extension and provided content.
 ///
 /// Calling the function with the full file path or simply a `get_subtitle_format(".sub", content)`
 /// both work. Returns `None` if subtitle format could not be recognized.
 ///
-/// It works exactly the same as `get_subtitle_format_by_ending` (see documentation), but also handles the  `.sub` cases
+/// It works exactly the same as `get_subtitle_format_by_extension` (see documentation), but also handles the  `.sub` cases
 /// correctly by using the provided content of the file as secondary info.
 ///
 /// `Option` is used to simplify handling with `PathBuf::extension()`.
@@ -213,7 +219,7 @@ pub fn get_subtitle_format(extension: Option<&OsStr>, content: &[u8]) -> Option<
     }
 }
 
-/// Returns the subtitle format by the file ending and provided content.
+/// Returns the subtitle format by the file extension and provided content.
 ///
 /// Works exactly like `get_subtitle_format`, but instead of `None` a `UnknownFileFormat`
 /// will be returned (for simpler error handling).
