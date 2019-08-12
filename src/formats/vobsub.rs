@@ -5,7 +5,7 @@
 use self::errors::*;
 use crate::errors::Result as SubtitleParserResult;
 use crate::timetypes::{TimePoint, TimeSpan};
-use crate::{SubtitleEntry, SubtitleFile, SubtitleFormat};
+use crate::{SubtitleEntry, SubtitleFileInterface, SubtitleFormat};
 use failure::ResultExt;
 
 use vobsub;
@@ -70,7 +70,7 @@ impl VobFile {
     }
 }
 
-impl SubtitleFile for VobFile {
+impl SubtitleFileInterface for VobFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
         Ok(self
             .lines

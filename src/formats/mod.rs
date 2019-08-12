@@ -10,7 +10,7 @@ pub mod ssa;
 pub mod vobsub;
 
 use crate::errors::*;
-use crate::SubtitleFile;
+use crate::SubtitleFileInterface;
 use encoding_rs::Encoding;
 use std::ffi::OsStr;
 
@@ -124,22 +124,22 @@ pub fn get_subtitle_format_err(extension: Option<&OsStr>, content: &[u8]) -> Res
 }
 
 /// This trick works around the limitation, that trait objects can not require Sized (or Clone).
-pub trait ClonableSubtitleFile: SubtitleFile + Send + Sync {
+pub trait ClonableSubtitleFileInterface: SubtitleFileInterface + Send + Sync {
     /// Returns a boxed clone
-    fn clone_box(&self) -> Box<ClonableSubtitleFile>;
+    fn clone_box(&self) -> Box<ClonableSubtitleFileInterface>;
 }
-impl<T> ClonableSubtitleFile for T
+impl<T> ClonableSubtitleFileInterface for T
 where
-    T: SubtitleFile + Clone + Send + Sync + 'static,
+    T: SubtitleFileInterface + Clone + Send + Sync + 'static,
 {
-    fn clone_box(&self) -> Box<ClonableSubtitleFile> {
+    fn clone_box(&self) -> Box<ClonableSubtitleFileInterface> {
         Box::new(Clone::clone(self))
     }
 }
 
 // We can now implement Clone manually by forwarding to clone_box.
-impl Clone for Box<ClonableSubtitleFile> {
-    fn clone(&self) -> Box<ClonableSubtitleFile> {
+impl Clone for Box<ClonableSubtitleFileInterface> {
+    fn clone(&self) -> Box<ClonableSubtitleFileInterface> {
         self.clone_box()
     }
 }
@@ -151,7 +151,7 @@ impl Clone for Box<ClonableSubtitleFile> {
 /// # Mandatory format specific options
 ///
 /// See `parse_bytes`.
-pub fn parse_str(format: SubtitleFormat, content: &str, fps: f64) -> Result<Box<ClonableSubtitleFile>> {
+pub fn parse_str(format: SubtitleFormat, content: &str, fps: f64) -> Result<Box<ClonableSubtitleFileInterface>> {
     match format {
         SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(content)?)),
         SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(content)?)),
@@ -185,7 +185,7 @@ fn decode_bytes_to_string(content: &[u8], encoding: &'static Encoding) -> Result
 /// seconds/minutes/... but in frame numbers. So the timing `0 to 30` means "show subtitle for one second"
 /// for a 30fps video, and "show subtitle for half second" for 60fps videos. The parameter specifies how
 /// frame numbers are converted into timestamps.
-pub fn parse_bytes(format: SubtitleFormat, content: &[u8], encoding: &'static Encoding, fps: f64) -> Result<Box<ClonableSubtitleFile>> {
+pub fn parse_bytes(format: SubtitleFormat, content: &[u8], encoding: &'static Encoding, fps: f64) -> Result<Box<ClonableSubtitleFileInterface>> {
     match format {
         SubtitleFormat::SubRip => Ok(Box::new(srt::SrtFile::parse(&decode_bytes_to_string(content, encoding)?)?)),
         SubtitleFormat::SubStationAlpha => Ok(Box::new(ssa::SsaFile::parse(&decode_bytes_to_string(content, encoding)?)?)),

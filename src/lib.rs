@@ -45,13 +45,13 @@ pub use formats::{
     get_subtitle_format, get_subtitle_format_by_extension, get_subtitle_format_by_extension_err, get_subtitle_format_err,
     is_valid_extension_for_subtitle_format, parse_bytes, parse_str,
 };
-pub use formats::{ClonableSubtitleFile, SubtitleFormat};
+pub use formats::{ClonableSubtitleFileInterface, SubtitleFormat};
 use timetypes::TimeSpan;
 
 /// This trait represents the generic interface for reading and writing subtitle information across all subtitle formats.
 ///
 /// This trait allows you to read, change and rewrite the subtitle file.
-pub trait SubtitleFile {
+pub trait SubtitleFileInterface {
     /// The subtitle entries can be changed by calling `update_subtitle_entries()`.
     fn get_subtitle_entries(&self) -> Result<Vec<SubtitleEntry>>;
 

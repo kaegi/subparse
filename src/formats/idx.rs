@@ -5,7 +5,7 @@
 use self::errors::ErrorKind::*; // the crate wide error type (we use a custom error type here)
 use self::errors::*;
 use super::common::*;
-use crate::{SubtitleEntry, SubtitleFile};
+use crate::{SubtitleEntry, SubtitleFileInterface};
 
 use crate::errors::Result as SubtitleParserResult;
 use combine::char::*;
@@ -66,7 +66,7 @@ impl IdxFile {
     }
 }
 
-impl SubtitleFile for IdxFile {
+impl SubtitleFileInterface for IdxFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
         let timings: Vec<_> = self
             .v

@@ -4,7 +4,7 @@
 
 use self::errors::ErrorKind::*;
 use self::errors::*;
-use crate::{SubtitleEntry, SubtitleFile};
+use crate::{SubtitleEntry, SubtitleFileInterface};
 
 use crate::errors::Result as SubtitleParserResult;
 use crate::formats::common::*;
@@ -233,7 +233,7 @@ impl MdvdFile {
     }
 }
 
-impl SubtitleFile for MdvdFile {
+impl SubtitleFileInterface for MdvdFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
         Ok(self.v.iter().map(|line| line.to_subtitle_entry(self.fps)).collect())
     }
@@ -339,7 +339,7 @@ impl SubtitleFile for MdvdFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use SubtitleFile;
+    use SubtitleFileInterface;
 
     /// Parse string with `MdvdFile`, and reencode it with `MdvdFile`.
     fn mdvd_reconstruct(s: &str) -> String {

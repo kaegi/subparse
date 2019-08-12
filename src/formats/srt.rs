@@ -4,7 +4,7 @@
 
 use self::errors::ErrorKind::*;
 use self::errors::*;
-use crate::{SubtitleEntry, SubtitleFile};
+use crate::{SubtitleEntry, SubtitleFileInterface};
 
 use crate::errors::Result as SubtitleParserResult;
 use crate::formats::common::*;
@@ -171,7 +171,7 @@ impl SrtFile {
     }
 }
 
-impl SubtitleFile for SrtFile {
+impl SubtitleFileInterface for SrtFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
         let timings = self
             .v
@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn create_srt_test() {
         use crate::timetypes::{TimePoint, TimeSpan};
-        use crate::SubtitleFile;
+        use crate::SubtitleFileInterface;
 
         let lines = vec![
             (

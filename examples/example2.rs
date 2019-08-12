@@ -1,7 +1,7 @@
 extern crate subparse;
 
 use subparse::timetypes::{TimePoint, TimeSpan};
-use subparse::{SrtFile, SubtitleFile};
+use subparse::{SrtFile, SubtitleFileInterface};
 
 fn main() {
     // example how to create a fresh .srt file

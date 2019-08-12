@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::{SubtitleEntry, SubtitleFile};
+use crate::{SubtitleEntry, SubtitleFileInterface};
 
 use crate::errors::Result as SubtitleParserResult;
 use crate::formats::common::*;
@@ -409,7 +409,7 @@ impl SsaFile {
     }
 }
 
-impl SubtitleFile for SsaFile {
+impl SubtitleFileInterface for SsaFile {
     fn get_subtitle_entries(&self) -> SubtitleParserResult<Vec<SubtitleEntry>> {
         // it's unfortunate we have to clone the file before using
         // `get_subtitle_entries_mut()`, but otherwise we'd have to copy the`
