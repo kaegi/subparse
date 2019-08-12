@@ -26,7 +26,6 @@ extern crate failure;
 extern crate itertools;
 extern crate vobsub;
 
-
 /// Error-chain generated error types.
 #[macro_use]
 pub mod errors;
@@ -43,7 +42,8 @@ pub use formats::srt::SrtFile;
 pub use formats::ssa::SsaFile;
 pub use formats::vobsub::VobFile;
 pub use formats::{
-    get_subtitle_format, get_subtitle_format_by_ending, get_subtitle_format_by_ending_err, get_subtitle_format_err, parse_bytes, parse_str, check_ending_for_subtitle_format
+    get_subtitle_format, get_subtitle_format_by_extension, get_subtitle_format_by_extension_err, get_subtitle_format_err,
+    is_valid_extension_for_subtitle_format, parse_bytes, parse_str,
 };
 pub use formats::{ClonableSubtitleFile, SubtitleFormat};
 use timetypes::TimeSpan;

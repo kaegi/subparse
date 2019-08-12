@@ -12,6 +12,7 @@ pub mod vobsub;
 use crate::errors::*;
 use crate::SubtitleFile;
 use encoding_rs::Encoding;
+use std::ffi::OsStr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// All formats which are supported by this library.
@@ -47,41 +48,49 @@ impl SubtitleFormat {
 
 /// Returns the subtitle format by the file ending.
 ///
-/// Calling the function with the full file path or simply a `get_subtitle_format_by_ending(".srt")`
+/// Calling the function with the full file path or simply a `get_subtitle_format_by_ending(Some("srt"))`
 /// both work. Returns `None` if subtitle format could not be recognized.
 ///
 /// Because the `.sub` file ending is ambiguous (both `MicroDVD` and `VobSub` use that ending) the
 /// function will return `None` in that case. Instead, use the content-aware `get_subtitle_format`
 /// to handle this case correctly.
-pub fn get_subtitle_format_by_ending(ending: &str) -> Option<SubtitleFormat> {
-    if ending.ends_with(".srt") {
+///
+/// `Option` is used to simplify handling with `PathBuf::extension()`.
+pub fn get_subtitle_format_by_extension<'a>(extension: Option<&OsStr>) -> Option<SubtitleFormat> {
+    let _ext_opt: Option<&OsStr> = extension.into();
+
+    if _ext_opt == Some(OsStr::new("srt")) {
         Some(SubtitleFormat::SubRip)
-    } else if ending.ends_with(".ssa") || ending.ends_with(".ass") {
+    } else if _ext_opt == Some(OsStr::new("ssa")) || _ext_opt == Some(OsStr::new("ass")) {
         Some(SubtitleFormat::SubStationAlpha)
-    } else if ending.ends_with(".idx") {
+    } else if _ext_opt == Some(OsStr::new("idx")) {
         Some(SubtitleFormat::VobSubIdx)
     } else {
         None
     }
 }
 
-/// Returns true if the filepath/filename/fileending is valid for the given subtitle format.
-pub fn check_ending_for_subtitle_format(ending: &str, format: SubtitleFormat) -> bool {
+/// Returns true if the filepath/filename/file-extension is valid for the given subtitle format.
+///
+/// `Option` is used to simplify handling with `PathBuf::extension()`.
+pub fn is_valid_extension_for_subtitle_format(extension: Option<&OsStr>, format: SubtitleFormat) -> bool {
     match format {
-        SubtitleFormat::SubRip => ending.ends_with(".srt"),
-        SubtitleFormat::SubStationAlpha => ending.ends_with(".ssa") || ending.ends_with(".ass"),
-        SubtitleFormat::VobSubIdx => ending.ends_with(".idx"),
-        SubtitleFormat::VobSubSub => ending.ends_with(".sub"),
-        SubtitleFormat::MicroDVD => ending.ends_with(".sub"),
+        SubtitleFormat::SubRip => extension == Some(OsStr::new("srt")),
+        SubtitleFormat::SubStationAlpha => extension == Some(OsStr::new("srt")) || extension == Some(OsStr::new("srt")),
+        SubtitleFormat::VobSubIdx => extension == Some(OsStr::new("idx")),
+        SubtitleFormat::VobSubSub => extension == Some(OsStr::new("sub")),
+        SubtitleFormat::MicroDVD => extension == Some(OsStr::new("sub")),
     }
 }
 
-/// Returns the subtitle format by the file ending.
+/// Returns the subtitle format by the file extension.
 ///
-/// Works exactly like `get_subtitle_format_by_ending`, but instead of `None` a `UnknownFileFormat`
+/// Works exactly like `get_subtitle_format_by_extension`, but instead of `None` a `UnknownFileFormat`
 /// will be returned (for simpler error handling).
-pub fn get_subtitle_format_by_ending_err(ending: &str) -> Result<SubtitleFormat> {
-    get_subtitle_format_by_ending(ending).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
+///
+/// `Option` is used to simplify handling with `PathBuf::extension()`.
+pub fn get_subtitle_format_by_extension_err(extension: Option<&OsStr>) -> Result<SubtitleFormat> {
+    get_subtitle_format_by_extension(extension).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
 }
 
 /// Returns the subtitle format by the file ending and provided content.
@@ -91,8 +100,10 @@ pub fn get_subtitle_format_by_ending_err(ending: &str) -> Result<SubtitleFormat>
 ///
 /// It works exactly the same as `get_subtitle_format_by_ending` (see documentation), but also handles the  `.sub` cases
 /// correctly by using the provided content of the file as secondary info.
-pub fn get_subtitle_format(ending: &str, content: &[u8]) -> Option<SubtitleFormat> {
-    if ending.ends_with(".sub") {
+///
+/// `Option` is used to simplify handling with `PathBuf::extension()`.
+pub fn get_subtitle_format(extension: Option<&OsStr>, content: &[u8]) -> Option<SubtitleFormat> {
+    if extension == Some(OsStr::new("sub")) {
         // test for VobSub .sub magic number
         if content.iter().take(4).cloned().eq([0x00, 0x00, 0x01, 0xba].iter().cloned()) {
             Some(SubtitleFormat::VobSubSub)
@@ -100,7 +111,7 @@ pub fn get_subtitle_format(ending: &str, content: &[u8]) -> Option<SubtitleForma
             Some(SubtitleFormat::MicroDVD)
         }
     } else {
-        get_subtitle_format_by_ending(ending)
+        get_subtitle_format_by_extension(extension)
     }
 }
 
@@ -108,8 +119,8 @@ pub fn get_subtitle_format(ending: &str, content: &[u8]) -> Option<SubtitleForma
 ///
 /// Works exactly like `get_subtitle_format`, but instead of `None` a `UnknownFileFormat`
 /// will be returned (for simpler error handling).
-pub fn get_subtitle_format_err(ending: &str, content: &[u8]) -> Result<SubtitleFormat> {
-    get_subtitle_format(ending, content).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
+pub fn get_subtitle_format_err(extension: Option<&OsStr>, content: &[u8]) -> Result<SubtitleFormat> {
+    get_subtitle_format(extension, content).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
 }
 
 /// This trick works around the limitation, that trait objects can not require Sized (or Clone).

@@ -1,9 +1,11 @@
+use std::path::Path;
+use std::path::PathBuf;
 use subparse::timetypes::TimeDelta;
 use subparse::SubtitleEntry;
 use subparse::{get_subtitle_format, parse_str};
 
 /// This function reads the content of a file to a `String`.
-fn read_file(path: &str) -> String {
+fn read_file(path: &Path) -> String {
     use std::io::Read;
     let mut file = std::fs::File::open(path).unwrap();
     let mut s = String::new();
@@ -13,11 +15,11 @@ fn read_file(path: &str) -> String {
 
 fn main() {
     // your setup goes here
-    let path = "path/your_example_file.ssa";
-    let file_content: String = read_file(path); // your own load routine
+    let path = PathBuf::from("path/your_example_file.ssa");
+    let file_content: String = read_file(&path); // your own load routine
 
     // parse the file
-    let format = get_subtitle_format(path, file_content.as_bytes()).expect("unknown format");
+    let format = get_subtitle_format(path.extension(), file_content.as_bytes()).expect("unknown format");
     let mut subtitle_file = parse_str(format, &file_content, 25.0).expect("parser error");
     let mut subtitle_entries: Vec<SubtitleEntry> = subtitle_file.get_subtitle_entries().expect("unexpected error");
 
