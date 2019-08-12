@@ -9,8 +9,8 @@ pub mod srt;
 pub mod ssa;
 pub mod vobsub;
 
-use crate::SubtitleEntry;
 use crate::errors::*;
+use crate::SubtitleEntry;
 use crate::SubtitleFileInterface;
 use encoding_rs::Encoding;
 use std::ffi::OsStr;
@@ -54,7 +54,6 @@ pub enum SubtitleFile {
 }
 
 impl SubtitleFile {
-
     /// The subtitle entries can be changed by calling `update_subtitle_entries()`.
     pub fn get_subtitle_entries(&self) -> Result<Vec<SubtitleEntry>> {
         match self {
@@ -129,7 +128,6 @@ impl From<microdvd::MdvdFile> for SubtitleFile {
         SubtitleFile::MicroDVDFile(f)
     }
 }
-
 
 impl SubtitleFormat {
     /// Get a descriptive string for the format like `".srt (SubRip)"`.
@@ -226,7 +224,6 @@ pub fn get_subtitle_format(extension: Option<&OsStr>, content: &[u8]) -> Option<
 pub fn get_subtitle_format_err(extension: Option<&OsStr>, content: &[u8]) -> Result<SubtitleFormat> {
     get_subtitle_format(extension, content).ok_or_else(|| ErrorKind::UnknownFileFormat.into())
 }
-
 
 /// Parse text subtitles, invoking the right parser given by `format`.
 ///

@@ -21,8 +21,15 @@ pub mod errors {
     pub enum ErrorKind {
         // TODO: Vobsub-ErrorKind display
         /// Since `vobsub::Error` does not implement Sync. We cannot use #[cause] for it.
-        #[fail(display = "VobSub error occured")]
         VobSubError { cause: vobsub::ErrorKind },
+    }
+
+    impl fmt::Display for ErrorKind {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                ErrorKind::VobSubError { cause } => writeln!(f, "VobSub error: {}", cause),
+            }
+        }
     }
 }
 
