@@ -66,7 +66,7 @@ impl fmt::Display for ErrorKind {
 }
 
 impl Fail for Error {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.inner.cause()
     }
 
@@ -171,7 +171,7 @@ macro_rules! define_error {
         }
 
         impl Fail for $error {
-            fn cause(&self) -> Option<&Fail> {
+            fn cause(&self) -> Option<&dyn Fail> {
                 self.inner.cause()
             }
 
