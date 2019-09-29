@@ -178,7 +178,7 @@ pub fn get_subtitle_format_by_extension(extension: Option<&OsStr>) -> Option<Sub
 pub fn is_valid_extension_for_subtitle_format(extension: Option<&OsStr>, format: SubtitleFormat) -> bool {
     match format {
         SubtitleFormat::SubRip => extension == Some(OsStr::new("srt")),
-        SubtitleFormat::SubStationAlpha => extension == Some(OsStr::new("srt")) || extension == Some(OsStr::new("srt")),
+        SubtitleFormat::SubStationAlpha => extension == Some(OsStr::new("ssa")) || extension == Some(OsStr::new("ass")),
         SubtitleFormat::VobSubIdx => extension == Some(OsStr::new("idx")),
         SubtitleFormat::VobSubSub => extension == Some(OsStr::new("sub")),
         SubtitleFormat::MicroDVD => extension == Some(OsStr::new("sub")),
