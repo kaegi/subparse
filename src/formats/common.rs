@@ -159,7 +159,7 @@ pub fn get_lines_non_destructive(s: &str) -> Vec<SplittedLine> {
 #[test]
 fn get_lines_non_destructive_test0() {
     let lines = ["", "aaabb", "aaabb\r\nbcccc\n\r\n ", "aaabb\r\nbcccc"];
-    for &full_line in lines.into_iter() {
+    for &full_line in lines.iter() {
         let joined: String = get_lines_non_destructive(full_line)
             .into_iter()
             .flat_map(|(s1, s2)| vec![s1, s2].into_iter())
