@@ -1,6 +1,6 @@
 [package]
 name = "subparse"
-version = "0.6.2"
+version = "0.6.3"
 authors = ["kaegi <kaegi.dev@gmail.com>"]
 description = "Load, change and write common subtitle formats (srt/ass/idx/sub)"
 repository = "https://github.com/kaegi/subparse"
@@ -13,7 +13,7 @@ edition = "2018"
 
 [dependencies]
 combine = "2.5.1"
-vobsub = "0.2.0"
+vobsub = "0.2.3"
 itertools = "0.8.0"
 encoding_rs = "0.8"
 failure = "0.1.5"
