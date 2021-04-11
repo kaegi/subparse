@@ -14,6 +14,7 @@ use crate::SubtitleEntry;
 use crate::SubtitleFileInterface;
 use encoding_rs::Encoding;
 use std::ffi::OsStr;
+use chardet::{charset2encoding, detect};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// All formats which are supported by this library.
@@ -242,9 +243,18 @@ pub fn parse_str(format: SubtitleFormat, content: &str, fps: f64) -> Result<Subt
     }
 }
 
-/// Helper function for text subtitles for byte-to-text decoding.
-fn decode_bytes_to_string(content: &[u8], encoding: &'static Encoding) -> Result<String> {
-    let (decoded, _, replaced) = encoding.decode(content);
+/// Helper function for text subtitles for byte-to-text decoding (use `None` for automatic detection).
+fn decode_bytes_to_string(content: &[u8], encoding: Option<&'static Encoding>) -> Result<String> {
+    let det_encoding = match encoding {
+        Some(encoding) => encoding,
+        None => {
+            let (charset, _, _) = detect(content);
+            let encoding_name = charset2encoding(&charset);
+            Encoding::for_label_no_replacement(encoding_name.as_bytes()).ok_or(ErrorKind::EncodingDetectionError)?
+        }
+    };
+
+    let (decoded, _, replaced) = det_encoding.decode(content);
     if replaced {
         Err(Error::from(ErrorKind::DecodingError))
     } else {
@@ -260,13 +270,13 @@ fn decode_bytes_to_string(content: &[u8], encoding: &'static Encoding) -> Result
 /// a specific format that has no additional parameters, you can use the `parse` function of
 /// the respective `***File` struct.
 ///
-/// `encoding`: to parse a text-based subtitle format, a character encoding is needed
+/// `encoding`: to parse a text-based subtitle format, a character encoding is needed (use `None` for auto-detection by `chardet`)
 ///
 /// `fps`: this parameter is used for `MicroDVD` `.sub` files. These files do not store timestamps in
 /// seconds/minutes/... but in frame numbers. So the timing `0 to 30` means "show subtitle for one second"
 /// for a 30fps video, and "show subtitle for half second" for 60fps videos. The parameter specifies how
 /// frame numbers are converted into timestamps.
-pub fn parse_bytes(format: SubtitleFormat, content: &[u8], encoding: &'static Encoding, fps: f64) -> Result<SubtitleFile> {
+pub fn parse_bytes(format: SubtitleFormat, content: &[u8], encoding: Option<&'static Encoding>, fps: f64) -> Result<SubtitleFile> {
     match format {
         SubtitleFormat::SubRip => Ok(srt::SrtFile::parse(&decode_bytes_to_string(content, encoding)?)?.into()),
         SubtitleFormat::SubStationAlpha => Ok(ssa::SsaFile::parse(&decode_bytes_to_string(content, encoding)?)?.into()),
