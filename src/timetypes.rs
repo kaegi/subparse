@@ -314,6 +314,7 @@ macro_rules! impl_sub_assign {
 }
 
 impl_add!(TimeDelta, TimeDelta, TimeDelta);
+impl_add!(TimePoint, TimePoint, TimeDelta);
 impl_add!(TimePoint, TimeDelta, TimePoint);
 impl_add!(TimeDelta, TimePoint, TimePoint);
 
